@@ -1,0 +1,72 @@
+diff --git a/build.sh b/build.sh
+index 387c5bb..077da88 100755
+--- a/build.sh
++++ b/build.sh
+@@ -68,7 +68,7 @@ do
+ 
+     validate_build ${machine} ${bsp_version} ${distro_codename}/${distro}.yaml
+ 
+-    generate_rootfs ${distro} ${distro_codename} ${machine}
++#    generate_rootfs ${distro} ${distro_codename} ${machine}
+     build_bsp ${distro} ${machine} ${bsp_version}
+     package_and_clean ${distro}
+ 
+diff --git a/configs/bdebstrap_configs/bookworm/bookworm-am64xx-evm.yaml b/configs/bdebstrap_configs/bookworm/bookworm-am64xx-evm.yaml
+index 28535d0..c132f63 100644
+--- a/configs/bdebstrap_configs/bookworm/bookworm-am64xx-evm.yaml
++++ b/configs/bdebstrap_configs/bookworm/bookworm-am64xx-evm.yaml
+@@ -31,8 +31,8 @@ mmdebstrap:
+     - vim
+     - k3conf
+     - weston
+-    - linux-image-6.1.83-k3
+-    - linux-headers-6.1.83-k3
++    - linux-image-6.6.40-k3
++    - linux-headers-6.6.40-k3
+     - linux-libc-dev
+     - cryptodev-linux-dkms
+     - firmware-ti-ipc-am64
+diff --git a/configs/bdebstrap_configs/bookworm/bookworm-rt-am64xx-evm.yaml b/configs/bdebstrap_configs/bookworm/bookworm-rt-am64xx-evm.yaml
+index 7bc43b4..3679d18 100644
+--- a/configs/bdebstrap_configs/bookworm/bookworm-rt-am64xx-evm.yaml
++++ b/configs/bdebstrap_configs/bookworm/bookworm-rt-am64xx-evm.yaml
+@@ -31,8 +31,8 @@ mmdebstrap:
+     - vim
+     - k3conf
+     - weston
+-    - linux-image-6.1.83-k3-rt
+-    - linux-headers-6.1.83-k3-rt
++    - linux-image-6.6.40-k3-rt
++    - linux-headers-6.6.40-k3-rt
+     - linux-libc-dev
+     - cryptodev-linux-dkms
+     - firmware-ti-ipc-am64
+diff --git a/scripts/build_distro.sh b/scripts/build_distro.sh
+index 6e2a4ae..b8d2b07 100755
+--- a/scripts/build_distro.sh
++++ b/scripts/build_distro.sh
+@@ -25,15 +25,20 @@ machine=$3
+ 
+ function package_and_clean() {
+ build=$1
++fs_dir=$(dirname ${topdir})/build/fs
++prefix=tisdk-debian-${distro}
+ 
+     cd ${topdir}/build/${build}
+ 
++    rm -rf ${prefix}-rootfs/
++    cp -r -p ${fs_dir} ${prefix}-rootfs/
++
+     log "> Cleaning up ${build}"
+-    tar --use-compress-program="pigz --best --recursive | pv" -cf tisdk-debian-${distro}-rootfs.tar.xz tisdk-debian-${distro}-rootfs &>>"${LOG_FILE}"
+-    rm -rf tisdk-debian-${distro}-rootfs
++    tar --use-compress-program="pigz --best --recursive | pv" -cf ${prefix}-rootfs.tar.xz ${prefix}-rootfs &>>"${LOG_FILE}"
++    rm -rf ${prefix}-rootfs
+ 
+-    tar --use-compress-program="pigz --best --recursive | pv" -cf tisdk-debian-${distro}-boot.tar.xz tisdk-debian-${distro}-boot &>>"${LOG_FILE}"
+-    rm -rf tisdk-debian-${distro}-boot
++    tar --use-compress-program="pigz --best --recursive | pv" -cf ${prefix}-boot.tar.xz ${prefix}-boot &>>"${LOG_FILE}"
++    rm -rf ${prefix}-boot
+ 
+     rm -rf bsp_sources
+ 

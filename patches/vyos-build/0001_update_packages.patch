@@ -1,0 +1,476 @@
+diff --git a/.gitignore b/.gitignore
+index 23101b27..14db1751 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -5,6 +5,7 @@ packer_cache/*
+ key/*
+ packages/*
+ !packages/*/
++ti-bdebstrap/
+ testinstall*.img
+ *.qcow2
+ *.tar
+diff --git a/build-am64x-boot.sh b/build-am64x-boot.sh
+new file mode 100755
+index 00000000..d3948a90
+--- /dev/null
++++ b/build-am64x-boot.sh
+@@ -0,0 +1,40 @@
++#!/bin/bash
++CWD=$(pwd)
++
++TARGET_NAME=bookworm-am64xx-evm
++
++set -e
++
++# argument1 => patches folder
++if [[ -z $1 ]]; then
++    echo "Missing 2nd arguments. ex> $0 <build-by> <patch dir>"
++    exit -1
++else
++    PATCH_DIR="$1"
++fi
++
++TI_BDEB_PATCH=${PATCH_DIR}/ti_bdebstrap
++if [ ! -d ${TI_BDEB_PATCH} ]; then
++    echo "Patch directory ($TI_BDEB_PATCH) does not exists"
++    exit -1
++fi
++
++SRC=ti-bdebstrap
++if [ ! -d $SRC ]; then
++    echo "I: Clone TI packages"
++    git clone https://github.com/TexasInstruments/ti-bdebstrap.git $SRC
++#    echo "I: switch to branch XXX"
++#    git checkout XXX
++    cd $SRC
++
++    for patch in $(ls ${TI_BDEB_PATCH})
++    do
++        echo "I: Apply patch: ${TI_BDEB_PATCH}/${patch}"
++        patch -p1 < ${TI_BDEB_PATCH}/${patch}
++    done
++else
++    cd $SRC
++fi
++
++echo "I: Building BSP image for \"${TARGET_NAME}\" and creating Package"
++sudo ./build.sh ${TARGET_NAME}
+diff --git a/build-image.sh b/build-image.sh
+new file mode 100755
+index 00000000..51acfb70
+--- /dev/null
++++ b/build-image.sh
+@@ -0,0 +1,53 @@
++#!/bin/bash
++
++set -e
++ROOTDIR=$(pwd)
++
++# argument1 => Build-by
++if [[ -z $1 ]]; then
++    echo "Missing 1st arguments. ex> $0 <build-by> <patch dir>"
++    exit -1
++else
++    BUILD_BY="$1"
++fi
++# argument2 => patches folder
++if [[ -z $2 ]]; then
++    echo "Missing 2nd arguments. ex> $0 <build-by> <patch dir>"
++    exit -1
++else
++    PATCH_DIR="$2"
++fi
++
++./build-vyos-image generic --debug --architecture arm64 --build-by $BUILD_BY --build-type development
++cd $ROOTDIR
++
++# Check ISO file
++LIVE_IMAGE_ISO=build/live-image-arm64.hybrid.iso
++
++if [ ! -e ${LIVE_IMAGE_ISO} ]; then
++  echo "File ${LIVE_IMAGE_ISO} not exists."
++  exit -1
++fi
++
++ISOLOOP=$(losetup --show -f ${LIVE_IMAGE_ISO})
++echo "Mounting iso on loopback: ${ISOLOOP}"
++
++rm -rf build/tmp/
++mkdir build/tmp/
++mount -o ro ${ISOLOOP} build/tmp/
++
++rm -rf build/fs
++unsquashfs -d build/fs build/tmp/live/filesystem.squashfs
++
++mkdir build/fs/boot/dtb
++cp -R build/fs/usr/lib/linux-image*/ti build/fs/boot/dtb
++
++cat build/fs/boot/vmlinuz* | sh -c 'gunzip -d > build/fs/boot/Image'
++
++echo "Copy new default configuration to the vyos image"
++cp -rf ${PATCH_DIR}/fs/. ${ROOTDIR}/build/fs/
++#cp -rf ${PATCH_DIR}/fs/usr/share/vyos/config.boot.default ${ROOTDIR}/build/fs/usr/share/vyos/config.boot.default
++#cp -rf ${PATCH_DIR}/fs/usr/libexec/vyos/conf_mode/system_console.py ${ROOTDIR}/build/fs/usr/libexec/vyos/conf_mode
++
++umount -d build/tmp/
++#losetup -d ${ISOLOOP}
+diff --git a/build-packages.sh b/build-packages.sh
+new file mode 100755
+index 00000000..76abe9d7
+--- /dev/null
++++ b/build-packages.sh
+@@ -0,0 +1,85 @@
++#!/usr/bin/bash
++
++base_dir=$(pwd)
++pkgs_dir=packages
++output_dir=
++
++#echo "Base directory: $base_dir"
++
++if [[ $1 == "all" ]]; then
++    patt=$pkgs_dir/*/
++else
++    patt=$1
++fi
++
++for dir_name in  $(ls -d $patt); do
++    pkg_name_def=""
++    pkg_name=""
++    scm_commit=""
++    scm_url=""
++    build_cmd=""
++
++    # remove all deb files in the directory before compiling deb files
++#    find $base_dir/$dir_name -name *.deb | xargs rm
++    echo "Dir name: $dir_name"
++
++    cd $base_dir/$dir_name
++    if [[ $dir_name =~ "linux-kernel" ]]; then
++        file_name=$base_dir/$dir_name/perle-Jenkinsfile
++    else
++        file_name=$base_dir/$dir_name/Jenkinsfile
++    fi
++
++    echo "File name: $file_name"
++    while read -r line; do
++        if [[ $line =~ "def package_name" ]]; then
++            pkg_name_def="$(echo $line | awk -F": " '{print $2}' | tr -d "'" | tr -d "," | tr -d "[" | tr -d "]" )"
++            echo "Defined package name: $pkg_name_def"
++        elif [[ $line =~ "'name'" ]]; then
++            pkg_name="$(echo $line | awk -F": " '{print $2}' | tr -d "'" | tr -d "," | tr -d "[" | tr -d "]" )"
++            if [[ $pkg_name_def != "" ]]; then
++                pkg_name=$pkg_name_def
++            fi
++            echo "Package name: $pkg_name"
++        elif [[ $line =~ "'scmCommit'" ]]; then
++            scm_commit="$(echo $line | awk -F": " '{print $2}' | tr -d "'" | tr -d "," | tr -d "[" | tr -d "]" )"
++            echo "scmCommit: $scm_commit"
++        elif [[ $line =~ "'scmUrl'" ]]; then
++            scm_url="$(echo $line | awk -F": " '{print $2}' | tr -d "'" | tr -d "," | tr -d "[" | tr -d "]" )"
++            echo "scmUrl: $scm_url"
++        elif [[ $line =~ "'buildCmd'" ]]; then
++            build_cmd="$(echo $line | awk -F": " '{print $2}' | tr -d "'" | tr -d "," | tr -d "[" | tr -d "]" )"
++            echo "Buildcmd: $build_cmd"
++            if [[ $scm_url != "" ]]; then
++                if [[ -d $pkg_name ]]; then
++                    echo "pkg_name: $pkg_name"
++                    cd $pkg_name
++                else
++                    echo "clone pkg_name: $pkg_name"
++                    git clone $scm_url $pkg_name
++                    cd $pkg_name
++                    git checkout $scm_commit
++                fi
++            fi
++            eval "$build_cmd"
++            cd $base_dir/$dir_name
++            pkg_name_def=""
++            pkg_name=""
++            scm_commit=""
++            scm_url=""
++            build_cmd=""
++#        else
++#            echo "Undefined line: $line"
++        fi
++    done < "$file_name"
++    cd $base_dir
++
++    # copy all deb files to the base directory
++    if [[ ! -d $pkgs_dir/$output_dir ]]; then
++        echo "Making Directory: $pkgs_dir/$output_dir"
++        mkdir -p $pkgs_dir/$output_dir
++    fi
++    echo "Copy all deb files from $base_dir/$dir_name to $pkgs_dir/$output_dir ..."
++    cp $base_dir/$dir_name/*.deb $pkgs_dir/$output_dir
++done
++
+diff --git a/packages/aws-gateway-load-balancer-tunnel-handler/.gitignore b/packages/aws-gateway-load-balancer-tunnel-handler/.gitignore
+index a3e428dc..6c266014 100644
+--- a/packages/aws-gateway-load-balancer-tunnel-handler/.gitignore
++++ b/packages/aws-gateway-load-balancer-tunnel-handler/.gitignore
+@@ -1 +1,2 @@
+-aws-gwlbtun/
++aws-gwlbtun*/
++aws-gwlbtun*
+diff --git a/packages/aws-gateway-load-balancer-tunnel-handler/Jenkinsfile b/packages/aws-gateway-load-balancer-tunnel-handler/Jenkinsfile
+index cbf5a407..7bdb643e 100644
+--- a/packages/aws-gateway-load-balancer-tunnel-handler/Jenkinsfile
++++ b/packages/aws-gateway-load-balancer-tunnel-handler/Jenkinsfile
+@@ -23,10 +23,10 @@ def timestamp = new Date().format('yyyyMMddhhmmss')
+ def commit_id = 'f78058a'
+ 
+ def pkgList = [
+-    ['name': "aws-gwlbtun-${timestamp}-${commit_id}",
+-     'scmCommit': commit_id,
++    ['name': 'aws-gwlbtun-2024-f78058a',
++     'scmCommit': 'f78058a',
+      'scmUrl': 'https://github.com/aws-samples/aws-gateway-load-balancer-tunnel-handler',
+-     'buildCmd': "../build.py --package aws-gwlbtun --version ${timestamp}-${commit_id}"],
++     'buildCmd': '../build.py --package aws-gwlbtun --version 2024-f78058a'],
+ ]
+ 
+ // Start package build using library function from https://github.com/vyos/vyos-build
+diff --git a/packages/isc-dhcp/.gitignore b/packages/isc-dhcp/.gitignore
+index d2c5a2db..b061b07f 100644
+--- a/packages/isc-dhcp/.gitignore
++++ b/packages/isc-dhcp/.gitignore
+@@ -1 +1,2 @@
+-isc-dhcp/
++isc-dhcp*/
++isc-dhcp*
+\ No newline at end of file
+diff --git a/packages/linux-kernel/.gitignore b/packages/linux-kernel/.gitignore
+index a3e9257c..7ab93512 100644
+--- a/packages/linux-kernel/.gitignore
++++ b/packages/linux-kernel/.gitignore
+@@ -1,9 +1,8 @@
+-/linux
++/linux*
+ /wireguard
+ /wireguard-linux-compat
+ /accel-ppp
+ /intel-qat
+-/linux-firmware
+ /vyos-drivers-intel*
+ /vyos-drivers-realtek*
+ /ovpn-dco
+@@ -11,6 +10,7 @@
+ /jool*
+ /qat*
+ /QAT*
++/debian-repos
+ *.tar.xz
+ /*.postinst
+ 
+diff --git a/packages/linux-kernel/perle-Jenkinsfile b/packages/linux-kernel/perle-Jenkinsfile
+new file mode 100644
+index 00000000..e3121d93
+--- /dev/null
++++ b/packages/linux-kernel/perle-Jenkinsfile
+@@ -0,0 +1,79 @@
++// Copyright (C) 2020-2024 VyOS maintainers and contributors
++//
++// This program is free software; you can redistribute it and/or modify
++// in order to easy exprort images built to "external" world
++// it under the terms of the GNU General Public License version 2 or later as
++// published by the Free Software Foundation.
++//
++// This program is distributed in the hope that it will be useful,
++// but WITHOUT ANY WARRANTY; without even the implied warranty of
++// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++// GNU General Public License for more details.
++//
++// You should have received a copy of the GNU General Public License
++// along with this program.  If not, see <http://www.gnu.org/licenses/>.
++@NonCPS
++
++// Using a version specifier library, use 'current' branch. The underscore (_)
++// is not a typo! You need this underscore if the line immediately after the
++// @Library annotation is not an import statement!
++@Library('vyos-build@current')_
++
++def pkgList = [
++    // The Linux Kernel
++    ['name': 'kernel',
++     'buildCmd': './perle-kernel-prepare.sh; ./build-kernel.sh'],
++
++    // Firmware
++    ['name': 'linux-firmware',
++     'scmCommit': '20240610',
++     'scmUrl': 'https://git.kernel.org/pub/scm/linux/kernel/git/firmware/linux-firmware.git',
++     'buildCmd': 'cd ..; ./build-linux-firmware.sh'],
++
++    // Accel-PPP
++    ['name': 'accel-ppp',
++     'scmCommit': '1.13.0',
++     'scmUrl': 'https://github.com/accel-ppp/accel-ppp.git',
++     'buildCmd': 'cd ..; pwd; ls -al; ./build-accel-ppp.sh'],
++
++    // Intel QAT
++    ['name': 'qat',
++     'buildCmd': './build-intel-qat.sh'],
++
++    // Intel IXGBE
++    ['name': 'ixgbe',
++     'buildCmd': './build-intel-ixgbe.sh'],
++
++    // Intel IXGBEVF
++    ['name': 'ixgbevf',
++     'buildCmd': './build-intel-ixgbevf.sh'],
++
++    // Mellanox OFED
++    ['name': 'ofed',
++     'buildCmd': './build-mellanox-ofed.sh'],
++
++    // Jool
++    ['name': 'jool',
++     'buildCmd': './build-jool.py'],
++
++    // OpenVPN DCO
++    ['name': 'ovpn-dco',
++     'scmCommit': 'v0.2.20231117',
++     'scmUrl': 'https://github.com/OpenVPN/ovpn-dco',
++     'buildCmd': 'cd ..; ./build-openvpn-dco.sh'],
++
++    // RTSP netfilter helper
++    ['name': 'nat-rtsp',
++    'scmCommit': '475af0a',
++     'scmUrl': 'https://github.com/maru-sama/rtsp-linux.git',
++     'buildCmd': 'cd ..; ./build-nat-rtsp.sh'],
++
++    // Debian
++    ['name': 'debian-repos',
++    'scmCommit': '09.02.00.009-update',
++    'scmUrl': https://github.com/TexasInstruments/debian-repos.git,
++    'buildCmd': './run.sh ti-linux-firmware; cp -rf build/bookworm/ti-linux-firmware/*64*.deb ..'],
++]
++
++// Start package build using library function from https://github.com/vyos/vyos-build
++buildPackage('Kernel', pkgList, null, true, "**/packages/linux-kernel/**")
+diff --git a/packages/linux-kernel/perle-kernel-prepare.sh b/packages/linux-kernel/perle-kernel-prepare.sh
+new file mode 100755
+index 00000000..dee749e3
+--- /dev/null
++++ b/packages/linux-kernel/perle-kernel-prepare.sh
+@@ -0,0 +1,15 @@
++#!/bin/bash
++
++# read the required Kernel version
++KERNEL_VER=$(cat ../../data/defaults.toml | tomlq -r .kernel_version)
++gpg2 --locate-keys torvalds@kernel.org gregkh@kernel.org
++curl -OL https://www.kernel.org/pub/linux/kernel/v6.x/linux-${KERNEL_VER}.tar.xz
++curl -OL https://www.kernel.org/pub/linux/kernel/v6.x/linux-${KERNEL_VER}.tar.sign
++xz -cd linux-${KERNEL_VER}.tar.xz | gpg2 --verify linux-${KERNEL_VER}.tar.sign -
++if [ $? -ne 0 ]; then
++    exit 1
++fi
++
++# Unpack Kernel source
++tar xf linux-${KERNEL_VER}.tar.xz
++ln -s linux-${KERNEL_VER} linux
+diff --git a/packages/pmacct/Jenkinsfile b/packages/pmacct/Jenkinsfile
+index 19af2c9b..e445a76c 100644
+--- a/packages/pmacct/Jenkinsfile
++++ b/packages/pmacct/Jenkinsfile
+@@ -23,7 +23,7 @@
+ def package_name = 'pmacct'
+ // "sudo apt-get remove git -y" is necessary for solving this issue https://vyos.dev/T5663
+ def pkgList = [
+-    ['name': "${package_name}",
++    ['name': 'pmacct',
+      'scmCommit': 'debian/1.7.7-1',
+      'scmUrl': 'https://salsa.debian.org/debian/pmacct.git',
+      'buildCmd': 'sudo mk-build-deps --install --tool "apt-get --yes --no-install-recommends"; sudo apt-get remove git -y; ../build.py'],
+diff --git a/packages/vyos/.gitignore b/packages/vyos/.gitignore
+new file mode 100644
+index 00000000..ee086f89
+--- /dev/null
++++ b/packages/vyos/.gitignore
+@@ -0,0 +1,4 @@
++vyos-1x*
++vyos-user-utils*
++vyos-xe-guest-utilities*
++libvyosconfig*
+\ No newline at end of file
+diff --git a/packages/vyos/Jenkinsfile b/packages/vyos/Jenkinsfile
+new file mode 100644
+index 00000000..85c5514c
+--- /dev/null
++++ b/packages/vyos/Jenkinsfile
+@@ -0,0 +1,46 @@
++// Copyright (C) 2024 VyOS maintainers and contributors
++//
++// This program is free software; you can redistribute it and/or modify
++// in order to easy exprort images built to "external" world
++// it under the terms of the GNU General Public License version 2 or later as
++// published by the Free Software Foundation.
++//
++// This program is distributed in the hope that it will be useful,
++// but WITHOUT ANY WARRANTY; without even the implied warranty of
++// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++// GNU General Public License for more details.
++//
++// You should have received a copy of the GNU General Public License
++// along with this program.  If not, see <http://www.gnu.org/licenses/>.
++
++@NonCPS
++
++// Using a version specifier library, use 'current' branch. The underscore (_)
++// is not a typo! You need this underscore if the line immediately after the
++// @Library annotation is not an import statement!
++@Library('vyos-build@current')_
++
++def pkgList = [
++    ['name': 'vyos-1x',
++     'scmCommit': 'current',
++     'scmUrl': 'https://github.com/vyos/vyos-1x',
++     'buildCmd': 'dpkg-buildpackage -uc -us -tc -b'],
++
++    ['name': 'vyos-user-utils',
++     'scmCommit': 'current',
++     'scmUrl': 'https://github.com/vyos/vyos-user-utils.git',
++     'buildCmd': 'dpkg-buildpackage -uc -us -tc -b'],
++
++    ['name': 'vyos-xe-guest-utilities',
++     'scmCommit': 'current',
++     'scmUrl': 'https://github.com/vyos/vyos-xe-guest-utilities.git',
++     'buildCmd': 'dpkg-buildpackage -b -us -uc -tc'],
++
++    ['name': 'libvyosconfig',
++     'scmCommit': 'current',
++     'scmUrl': 'https://github.com/vyos/libvyosconfig.git',
++     'buildCmd': 'eval $(opam env --root=/opt/opam --set-root) && dpkg-buildpackage -b -us -uc -tc'],
++]
++
++// Start package build using library function from https://github.com/vyos/vyos-build
++buildPackage('vyos', pkgList, null, false, "**/packages/vyos/**")
+diff --git a/packages/waagent/.gitignore b/packages/waagent/.gitignore
+new file mode 100644
+index 00000000..762c9db5
+--- /dev/null
++++ b/packages/waagent/.gitignore
+@@ -0,0 +1 @@
++waagent/
+diff --git a/packages/waagent/Jenkinsfile b/packages/waagent/Jenkinsfile
+index 79415d71..90567b1b 100644
+--- a/packages/waagent/Jenkinsfile
++++ b/packages/waagent/Jenkinsfile
+@@ -22,7 +22,7 @@
+ 
+ def package_name = 'waagent'
+ def pkgList = [
+-    ['name': "${package_name}",
++    ['name': 'waagent',
+      'scmCommit': 'debian/2.9.1.1-2',
+      'scmUrl': 'https://salsa.debian.org/cloud-team/waagent.git',
+      'buildCmd': 'sudo mk-build-deps --install --tool "apt-get --yes --no-install-recommends"; sudo apt-get install --yes --no-install-recommends dpkg-source-gitarchive; ../build.py'],
+diff --git a/packages/wide-dhcpv6/.gitignore b/packages/wide-dhcpv6/.gitignore
+index 5fd2ad64..57cef6d0 100644
+--- a/packages/wide-dhcpv6/.gitignore
++++ b/packages/wide-dhcpv6/.gitignore
+@@ -1 +1,2 @@
+ wide-dhcpv6/
++wide-dhcpv6*
+\ No newline at end of file

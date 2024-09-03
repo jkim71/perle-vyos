@@ -1,8 +1,13 @@
 diff --git a/.gitignore b/.gitignore
-index 23101b27..14db1751 100644
+index 23101b27..f98fb710 100644
 --- a/.gitignore
 +++ b/.gitignore
-@@ -5,6 +5,7 @@ packer_cache/*
+@@ -1,10 +1,11 @@
+-build/*
++build*
+ *.pyc
+ packer_build/*
+ packer_cache/*
  key/*
  packages/*
  !packages/*/
@@ -12,10 +17,10 @@ index 23101b27..14db1751 100644
  *.tar
 diff --git a/build-am64x-boot.sh b/build-am64x-boot.sh
 new file mode 100755
-index 00000000..d3948a90
+index 00000000..9754f3db
 --- /dev/null
 +++ b/build-am64x-boot.sh
-@@ -0,0 +1,40 @@
+@@ -0,0 +1,49 @@
 +#!/bin/bash
 +CWD=$(pwd)
 +
@@ -25,10 +30,17 @@ index 00000000..d3948a90
 +
 +# argument1 => patches folder
 +if [[ -z $1 ]]; then
-+    echo "Missing 2nd arguments. ex> $0 <build-by> <patch dir>"
++    echo "Missing 1st arguments. ex> $0 <patch dir> <sudo password>"
 +    exit -1
 +else
 +    PATCH_DIR="$1"
++fi
++
++if [[ -z $2 ]]; then
++    echo "Missing 2nd arguments. ex> $0 <patch dir> <sudo password>"
++    exit -1
++else
++    SUDO_PIN="$2"
 +fi
 +
 +TI_BDEB_PATCH=${PATCH_DIR}/ti_bdebstrap
@@ -55,6 +67,8 @@ index 00000000..d3948a90
 +fi
 +
 +echo "I: Building BSP image for \"${TARGET_NAME}\" and creating Package"
++#As we run this scrpt in docker environment, we don't need sudo password
++#echo $SUDO_PIN | sudo ./build.sh ${TARGET_NAME}
 +sudo ./build.sh ${TARGET_NAME}
 diff --git a/build-image.sh b/build-image.sh
 new file mode 100755
@@ -117,7 +131,7 @@ index 00000000..51acfb70
 +#losetup -d ${ISOLOOP}
 diff --git a/build-packages.sh b/build-packages.sh
 new file mode 100755
-index 00000000..76abe9d7
+index 00000000..00efa83f
 --- /dev/null
 +++ b/build-packages.sh
 @@ -0,0 +1,85 @@
@@ -156,7 +170,7 @@ index 00000000..76abe9d7
 +    echo "File name: $file_name"
 +    while read -r line; do
 +        if [[ $line =~ "def package_name" ]]; then
-+            pkg_name_def="$(echo $line | awk -F": " '{print $2}' | tr -d "'" | tr -d "," | tr -d "[" | tr -d "]" )"
++            pkg_name_def="$(echo $line | awk -F"= " '{print $2}' | tr -d "'" | tr -d "," | tr -d "[" | tr -d "]" )"
 +            echo "Defined package name: $pkg_name_def"
 +        elif [[ $line =~ "'name'" ]]; then
 +            pkg_name="$(echo $line | awk -F": " '{print $2}' | tr -d "'" | tr -d "," | tr -d "[" | tr -d "]" )"
@@ -173,7 +187,7 @@ index 00000000..76abe9d7
 +        elif [[ $line =~ "'buildCmd'" ]]; then
 +            build_cmd="$(echo $line | awk -F": " '{print $2}' | tr -d "'" | tr -d "," | tr -d "[" | tr -d "]" )"
 +            echo "Buildcmd: $build_cmd"
-+            if [[ $scm_url != "" ]]; then
++            if [[ -n $scm_url ]]; then
 +                if [[ -d $pkg_name ]]; then
 +                    echo "pkg_name: $pkg_name"
 +                    cd $pkg_name
@@ -203,16 +217,15 @@ index 00000000..76abe9d7
 +        mkdir -p $pkgs_dir/$output_dir
 +    fi
 +    echo "Copy all deb files from $base_dir/$dir_name to $pkgs_dir/$output_dir ..."
-+    cp $base_dir/$dir_name/*.deb $pkgs_dir/$output_dir
++    cp -rf $base_dir/$dir_name/*.deb $pkgs_dir/$output_dir | true
 +done
 +
 diff --git a/packages/aws-gateway-load-balancer-tunnel-handler/.gitignore b/packages/aws-gateway-load-balancer-tunnel-handler/.gitignore
-index a3e428dc..6c266014 100644
+index a3e428dc..7cec2d30 100644
 --- a/packages/aws-gateway-load-balancer-tunnel-handler/.gitignore
 +++ b/packages/aws-gateway-load-balancer-tunnel-handler/.gitignore
-@@ -1 +1,2 @@
+@@ -1 +1 @@
 -aws-gwlbtun/
-+aws-gwlbtun*/
 +aws-gwlbtun*
 diff --git a/packages/aws-gateway-load-balancer-tunnel-handler/Jenkinsfile b/packages/aws-gateway-load-balancer-tunnel-handler/Jenkinsfile
 index cbf5a407..7bdb643e 100644
@@ -232,15 +245,53 @@ index cbf5a407..7bdb643e 100644
  ]
  
  // Start package build using library function from https://github.com/vyos/vyos-build
+diff --git a/packages/ethtool/Jenkinsfile b/packages/ethtool/Jenkinsfile
+index bddd3b63..755dfe7d 100644
+--- a/packages/ethtool/Jenkinsfile
++++ b/packages/ethtool/Jenkinsfile
+@@ -22,7 +22,7 @@
+ 
+ def pkgList = [
+     ['name': 'ethtool',
+-     'scmCommit': 'debian/1%6.6-1',
++     'scmCommit': 'debian/1%6.10-1',
+      'scmUrl': 'https://salsa.debian.org/kernel-team/ethtool',
+      'buildCmd': 'sudo mk-build-deps --install --tool "apt-get --yes --no-install-recommends"; dpkg-buildpackage -uc -us -tc -b'],
+ ]
+diff --git a/packages/hsflowd/build.sh b/packages/hsflowd/build.sh
+index 0b00c998..eb845ac0 100755
+--- a/packages/hsflowd/build.sh
++++ b/packages/hsflowd/build.sh
+@@ -20,7 +20,8 @@ echo "I: Build VyOS hsflowd Package"
+ make deb FEATURES="PCAP DROPMON DBUS"
+ 
+ # hsflowd builds ARM package as aarch64 extension, rename to arm64
+-for file in *.deb ; do mv $file ${file//aarch64/arm64} || true ; done
++# for file in *.deb ; do mv $file ${file//aarch64/arm64} || true ; done
++for file in *.deb ; do mv $file .. || true ; done
+ 
+ # Do not confuse *.deb upload logic by removing build in debian packages ...
+ # ugly but works
 diff --git a/packages/isc-dhcp/.gitignore b/packages/isc-dhcp/.gitignore
-index d2c5a2db..b061b07f 100644
+index d2c5a2db..eef7b55a 100644
 --- a/packages/isc-dhcp/.gitignore
 +++ b/packages/isc-dhcp/.gitignore
-@@ -1 +1,2 @@
+@@ -1 +1 @@
 -isc-dhcp/
-+isc-dhcp*/
 +isc-dhcp*
-\ No newline at end of file
+diff --git a/packages/keepalived/Jenkinsfile b/packages/keepalived/Jenkinsfile
+index 0d886751..02e95b49 100644
+--- a/packages/keepalived/Jenkinsfile
++++ b/packages/keepalived/Jenkinsfile
+@@ -23,7 +23,7 @@
+ def package_name = 'keepalived'
+ 
+ def pkgList = [
+-    ['name': "${package_name}",
++    ['name': 'keepalived',
+      'scmCommit': 'debian/1%2.2.8-1',
+      'scmUrl': 'https://salsa.debian.org/debian/pkg-keepalived.git',
+      'buildCmd': 'sudo mk-build-deps --install --tool "apt-get --yes --no-install-recommends"; ../build.py'],
 diff --git a/packages/linux-kernel/.gitignore b/packages/linux-kernel/.gitignore
 index a3e9257c..7ab93512 100644
 --- a/packages/linux-kernel/.gitignore
@@ -371,10 +422,10 @@ index 00000000..dee749e3
 +tar xf linux-${KERNEL_VER}.tar.xz
 +ln -s linux-${KERNEL_VER} linux
 diff --git a/packages/pmacct/Jenkinsfile b/packages/pmacct/Jenkinsfile
-index 19af2c9b..e445a76c 100644
+index 19af2c9b..2a63c5f0 100644
 --- a/packages/pmacct/Jenkinsfile
 +++ b/packages/pmacct/Jenkinsfile
-@@ -23,7 +23,7 @@
+@@ -23,10 +23,10 @@
  def package_name = 'pmacct'
  // "sudo apt-get remove git -y" is necessary for solving this issue https://vyos.dev/T5663
  def pkgList = [
@@ -382,7 +433,11 @@ index 19af2c9b..e445a76c 100644
 +    ['name': 'pmacct',
       'scmCommit': 'debian/1.7.7-1',
       'scmUrl': 'https://salsa.debian.org/debian/pmacct.git',
-      'buildCmd': 'sudo mk-build-deps --install --tool "apt-get --yes --no-install-recommends"; sudo apt-get remove git -y; ../build.py'],
+-     'buildCmd': 'sudo mk-build-deps --install --tool "apt-get --yes --no-install-recommends"; sudo apt-get remove git -y; ../build.py'],
++     'buildCmd': 'sudo mk-build-deps --install --tool "apt-get --yes --no-install-recommends"; sudo apt-get remove git -y; ../build.py; sudo apt install -y git'],
+ ]
+ 
+ // Start package build using library function from https://github.com/vyos/vyos-build
 diff --git a/packages/vyos/.gitignore b/packages/vyos/.gitignore
 new file mode 100644
 index 00000000..ee086f89
@@ -396,10 +451,10 @@ index 00000000..ee086f89
 \ No newline at end of file
 diff --git a/packages/vyos/Jenkinsfile b/packages/vyos/Jenkinsfile
 new file mode 100644
-index 00000000..85c5514c
+index 00000000..1457ed5f
 --- /dev/null
 +++ b/packages/vyos/Jenkinsfile
-@@ -0,0 +1,46 @@
+@@ -0,0 +1,51 @@
 +// Copyright (C) 2024 VyOS maintainers and contributors
 +//
 +// This program is free software; you can redistribute it and/or modify
@@ -442,6 +497,11 @@ index 00000000..85c5514c
 +     'scmCommit': 'current',
 +     'scmUrl': 'https://github.com/vyos/libvyosconfig.git',
 +     'buildCmd': 'eval $(opam env --root=/opt/opam --set-root) && dpkg-buildpackage -b -us -uc -tc'],
++
++    ['name': 'vyatta-bah',
++     'scmCommit': 'current',
++     'scmUrl': 'https://github.com/vyos/vyatta-bash.git',
++     'buildCmd': 'dpkg-buildpackage -b -us -uc -tc'],
 +]
 +
 +// Start package build using library function from https://github.com/vyos/vyos-build
@@ -467,10 +527,9 @@ index 79415d71..90567b1b 100644
       'scmUrl': 'https://salsa.debian.org/cloud-team/waagent.git',
       'buildCmd': 'sudo mk-build-deps --install --tool "apt-get --yes --no-install-recommends"; sudo apt-get install --yes --no-install-recommends dpkg-source-gitarchive; ../build.py'],
 diff --git a/packages/wide-dhcpv6/.gitignore b/packages/wide-dhcpv6/.gitignore
-index 5fd2ad64..57cef6d0 100644
+index 5fd2ad64..4eb22ba4 100644
 --- a/packages/wide-dhcpv6/.gitignore
 +++ b/packages/wide-dhcpv6/.gitignore
-@@ -1 +1,2 @@
- wide-dhcpv6/
+@@ -1 +1 @@
+-wide-dhcpv6/
 +wide-dhcpv6*
-\ No newline at end of file

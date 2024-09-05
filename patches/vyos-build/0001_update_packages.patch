@@ -1,13 +1,8 @@
 diff --git a/.gitignore b/.gitignore
-index 23101b27..f98fb710 100644
+index 23101b27..14db1751 100644
 --- a/.gitignore
 +++ b/.gitignore
-@@ -1,10 +1,11 @@
--build/*
-+build*
- *.pyc
- packer_build/*
- packer_cache/*
+@@ -5,6 +5,7 @@ packer_cache/*
  key/*
  packages/*
  !packages/*/
@@ -293,34 +288,67 @@ index 0d886751..02e95b49 100644
       'scmUrl': 'https://salsa.debian.org/debian/pkg-keepalived.git',
       'buildCmd': 'sudo mk-build-deps --install --tool "apt-get --yes --no-install-recommends"; ../build.py'],
 diff --git a/packages/linux-kernel/.gitignore b/packages/linux-kernel/.gitignore
-index a3e9257c..7ab93512 100644
+index a3e9257c..481da8d1 100644
 --- a/packages/linux-kernel/.gitignore
 +++ b/packages/linux-kernel/.gitignore
-@@ -1,9 +1,8 @@
+@@ -1,4 +1,4 @@
 -/linux
 +/linux*
  /wireguard
  /wireguard-linux-compat
  /accel-ppp
- /intel-qat
--/linux-firmware
- /vyos-drivers-intel*
- /vyos-drivers-realtek*
- /ovpn-dco
-@@ -11,6 +10,7 @@
+@@ -11,6 +11,8 @@
  /jool*
  /qat*
  /QAT*
 +/debian-repos
++/mwifiex
  *.tar.xz
  /*.postinst
  
+diff --git a/packages/linux-kernel/build-mwifiex.sh b/packages/linux-kernel/build-mwifiex.sh
+new file mode 100755
+index 00000000..10118134
+--- /dev/null
++++ b/packages/linux-kernel/build-mwifiex.sh
+@@ -0,0 +1,31 @@
++#!/bin/sh
++CWD=$(pwd)
++PATCH_DIR=$(dirname $(dirname $(dirname ${CWD})))/patches
++IMX_FIRMWARE_REPO="https://github.com/nxp-imx/imx-firmware.git"
++IMX_FIRMWARE_BRANCH="lf-6.6.3_1.0.0"
++
++MWIFIEX_SRC=${CWD}/mwifiex
++if [ ! -d ${MWIFIEX_SRC} ]; then
++    echo "MWIFIEX source not found"
++    exit 1
++fi
++
++FIRMWARE_SRC=${MWIFIEX_SRC}/imx-firmware
++if [ ! -d $FIRMWARE_SRC ]; then
++    git clone ${IMX_FIRMWARE_REPO} -b ${IMX_FIRMWARE_BRANCH} ${FIRMWARE_SRC}
++fi
++
++cd ${MWIFIEX_SRC}/mxm_wifiex/wlan_src
++echo "I: Build MWIFIEX driver"
++make -C ${CWD}/linux M=$PWD
++
++echo "Patch DIR: ${PATCH_DIR}"
++mkdir -p ${PATCH_DIR}/fs/lib/modules/nxp
++echo "Copying *.ko files to ${PATCH_DIR}/fs/lib/modules/nxp/"
++cp -rf ${MWIFIEX_SRC}/mxm_wifiex/wlan_src/*.ko ${PATCH_DIR}/fs/lib/modules/nxp/
++
++mkdir -p ${PATCH_DIR}/fs/lib/firmware/nxp
++echo "Copying *.bin file to ${PATCH_DIR}/fs/lib/firmware/nxp/"
++cp -rf ${FIRMWARE_SRC}/nxp/FwImage_9098_PCIE/*.bin ${PATCH_DIR}/fs/lib/firmware/nxp/
++echo "Copying wifi_mod_para.conf file to ${PATCH_DIR}/fs/lib/firmware/nxp/"
++cp -rf ${FIRMWARE_SRC}/nxp/wifi_mod_para.conf ${PATCH_DIR}/fs/lib/firmware/nxp/
 diff --git a/packages/linux-kernel/perle-Jenkinsfile b/packages/linux-kernel/perle-Jenkinsfile
 new file mode 100644
-index 00000000..e3121d93
+index 00000000..5b048e7a
 --- /dev/null
 +++ b/packages/linux-kernel/perle-Jenkinsfile
-@@ -0,0 +1,79 @@
+@@ -0,0 +1,85 @@
 +// Copyright (C) 2020-2024 VyOS maintainers and contributors
 +//
 +// This program is free software; you can redistribute it and/or modify
@@ -387,14 +415,20 @@ index 00000000..e3121d93
 +
 +    // RTSP netfilter helper
 +    ['name': 'nat-rtsp',
-+    'scmCommit': '475af0a',
++     'scmCommit': '475af0a',
 +     'scmUrl': 'https://github.com/maru-sama/rtsp-linux.git',
 +     'buildCmd': 'cd ..; ./build-nat-rtsp.sh'],
 +
-+    // Debian
++    // NXP 88Q9098/88W9098
++    ['name': 'mwifiex',
++     'scmCommit': 'lf-6.6.3_1.0.0',
++     'scmUrl': 'https://github.com/johnlfeeney/mwifiex.git',
++     'buildCmd': 'cd ..; ./build-mwifiex.sh'],
++
++         // Debian
 +    ['name': 'debian-repos',
 +    'scmCommit': '09.02.00.009-update',
-+    'scmUrl': https://github.com/TexasInstruments/debian-repos.git,
++    'scmUrl': 'https://github.com/TexasInstruments/debian-repos.git',
 +    'buildCmd': './run.sh ti-linux-firmware; cp -rf build/bookworm/ti-linux-firmware/*64*.deb ..'],
 +]
 +
@@ -438,20 +472,31 @@ index 19af2c9b..2a63c5f0 100644
  ]
  
  // Start package build using library function from https://github.com/vyos/vyos-build
+diff --git a/packages/telegraf/build.sh b/packages/telegraf/build.sh
+index 2ba511d0..1ccfea6f 100755
+--- a/packages/telegraf/build.sh
++++ b/packages/telegraf/build.sh
+@@ -25,3 +25,5 @@ export PATH=/opt/go/bin:$PATH
+ # Generate default telegraf config
+ go run ./cmd/telegraf config > etc/telegraf.conf
+ LDFLAGS=-w make "${BUILD_ARCH}.deb"
++
++cp ${CWD}/${SRC}/build/dist/*.deb ${CWD}
 diff --git a/packages/vyos/.gitignore b/packages/vyos/.gitignore
 new file mode 100644
-index 00000000..ee086f89
+index 00000000..d67691f9
 --- /dev/null
 +++ b/packages/vyos/.gitignore
-@@ -0,0 +1,4 @@
+@@ -0,0 +1,5 @@
 +vyos-1x*
 +vyos-user-utils*
 +vyos-xe-guest-utilities*
 +libvyosconfig*
++vyatta-bash*
 \ No newline at end of file
 diff --git a/packages/vyos/Jenkinsfile b/packages/vyos/Jenkinsfile
 new file mode 100644
-index 00000000..1457ed5f
+index 00000000..d7522894
 --- /dev/null
 +++ b/packages/vyos/Jenkinsfile
 @@ -0,0 +1,51 @@
@@ -498,7 +543,7 @@ index 00000000..1457ed5f
 +     'scmUrl': 'https://github.com/vyos/libvyosconfig.git',
 +     'buildCmd': 'eval $(opam env --root=/opt/opam --set-root) && dpkg-buildpackage -b -us -uc -tc'],
 +
-+    ['name': 'vyatta-bah',
++    ['name': 'vyatta-bash',
 +     'scmCommit': 'current',
 +     'scmUrl': 'https://github.com/vyos/vyatta-bash.git',
 +     'buildCmd': 'dpkg-buildpackage -b -us -uc -tc'],

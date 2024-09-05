@@ -15,6 +15,7 @@ packages=(
     "frr"
     "strongswan"
     "vyos"
+    "podman"
 )
 
 #if [ "$EUID" -ne 0 ] ; then

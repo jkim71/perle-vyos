@@ -22,6 +22,9 @@ system {
         device ttyS0 {
             speed 115200
         }
+        device ttyS2 {
+            speed 115200
+        }
     }
     option {
         performance throughput

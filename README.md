@@ -1,4 +1,4 @@
-Perle build with VyOS toplevel build
+Perle build with VyOS
 ===================
 
 # About this repository
@@ -11,11 +11,13 @@ used for building those packages and the installation image.
 
 There are several directories with their own purpose:
 
+ * `docker/`     Docker build environments
  * `patches/`    Patch files to update scripts and packages
- *      `configs/`      Linux configurations for Perle Systems
- *      `fs/`           Customize setting for Perle Systems
- *      `ti_bdebstrap/` Customized patch files to build "ti_bdestrap" for Perle Systems
- *      `vyos-build/`   Customized Patch files to build "VyOS" for Perle Systems
+
+        configs/      Linux configurations for Perle Systems
+        fs/           Customize file system changes for Perle Systems
+        ti_bdebstrap/ Customized patch files to build "ti_bdestrap" for Perle Systems
+        vyos-build/   Customized Patch files to build "VyOS" for Perle Systems
 
 # Building
 

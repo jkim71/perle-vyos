@@ -1,1 +1,3 @@
 /vyos-build
+*.ko
+*.bin

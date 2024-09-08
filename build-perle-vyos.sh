@@ -75,16 +75,16 @@ else
     cd $VYOS_BUILD_DIR
 fi
 
-#echo ""
-#echo "I: Builing VyOS Packages"
-#cp ${PATCH_DIR}/configs/arch/arm64/ti_evm_vyos_defconfig ${CWD}/${VYOS_BUILD_DIR}/${VYOS_PKG_DIR}/linux-kernel/arch/arm64/configs/vyos_defconfig
-#for package in "${packages[@]}"
-#do
-#    echo ""
-#    echo "I: Building package $package.."
-#    ./build-packages.sh < /dev/null $VYOS_PKG_DIR/$package
-#done
-#Elapse_Time "Package build time" $TIME_START
+echo ""
+echo "I: Builing VyOS Packages"
+cp ${PATCH_DIR}/configs/arch/arm64/ti_evm_vyos_defconfig ${CWD}/${VYOS_BUILD_DIR}/${VYOS_PKG_DIR}/linux-kernel/arch/arm64/configs/vyos_defconfig
+for package in "${packages[@]}"
+do
+    echo ""
+    echo "I: Building package $package.."
+    ./build-packages.sh < /dev/null $VYOS_PKG_DIR/$package
+done
+Elapse_Time "Package build time" $TIME_START
 
 echo ""
 echo "I: Creating VyOS Image"

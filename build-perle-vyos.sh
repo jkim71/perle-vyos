@@ -109,7 +109,7 @@ else
     cd $VYOS_BUILD_DIR
 fi
 
-if false; then
+if true; then
     echo ""
     echo "I: Builing VyOS Packages"
     cp ${PATCH_DIR}/configs/arch/arm64/ti_evm_vyos_defconfig ${CWD}/${VYOS_BUILD_DIR}/${VYOS_PKG_DIR}/linux-kernel/arch/arm64/configs/vyos_defconfig
@@ -122,7 +122,7 @@ if false; then
     Elapse_Time "Package build time" $TIME_START
 fi
 
-if false; then
+if true; then
     echo ""
     echo "I: Creating VyOS Image"
     if $READ_SUDO_PIN; then

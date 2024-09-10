@@ -1,0 +1,28 @@
+#!/bin/sh
+# This script is executed at boot time after VyOS configuration is fully applied.
+# Any modifications required to work around unfixed bugs
+# or use services not available through the VyOS CLI system can be placed here.
+
+# Include VyOS functions
+source /opt/vyatta/etc/functions/script-template
+
+WWAN_INTERFACE=$(ifconfig -a | grep -o 'wwan[0-9]\+')
+
+if [ -n "$WWAN_INTERFACE" ]; then
+    CURRENT_MODE=$(sysctl -n net.ipv6.conf.$WWAN_INTERFACE.addr_gen_mode)
+
+    if [ "$CURRENT_MODE" != 0 ]; then
+        sudo sysctl -w net.ipv6.conf.$WWAN_INTERFACE.addr_gen_mode=0
+    fi
+
+    AUTOCONF="/opt/vyatta/config/active/interfaces/wwan/$WWAN_INTERFACE/ipv6/address/autoconf"
+    if [ -d "$AUTOCONF" ]; then
+        run force ipv6-rd interface ${WWAN_INTERFACE}
+    fi
+else
+    echo "No WWAN interface found."
+    WWXIF=$(ifconfig -a | grep -o 'wwx[0-9]\+')
+    if [ -n "$WWXIF" ]; then
+        echo "Interface found: $WWXIF"
+    fi
+fi

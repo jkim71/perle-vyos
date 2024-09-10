@@ -1,6 +1,19 @@
 #!/bin/bash
 CWD=$(pwd)
 
+C_DEF=$(tput sgr0) #"\e[0m"
+C_BOLD=$(tput bold)
+C_RED=$(tput setaf 1) #"\e[31m"
+C_GREEN=$(tput setaf 2) #"\e[32m"
+C_YELLOW=$(tput setaf 3) #"\e[33m"
+C_BLUE=$(tput setaf 4) #"\e[34m"
+C_MAGENTA=$(tput setaf 5) #"\e[35m"
+C_CYAN=$(tput setaf 6) #"\e[36m"
+C_WHITE=$(tput setaf 7)
+
+# As we run this script in docker environment, we don't need sudo password
+READ_SUDO_PIN=false
+
 # BASE_DIR=$(dirname ${CWD})
 BUILD_BY="$(git config user.email)"
 VYOS_BUILD_DIR=vyos-build
@@ -30,6 +43,18 @@ if [ -z $BUILD_BY ]; then
     BUILD_BY="jkim@perle.com"
 fi
 
+function log_error() {
+    echo $C_BOLD$C_RED$1$C_DEF
+}
+
+function log_warning() {
+    echo $C_BOLD$C_YELLOW$1$C_DEF
+}
+
+function log_notice() {
+    echo $C_BOLD$C_CYAN$1$C_DEF
+}
+
 function Elapse_Time() {
     TITLE=$1
     START_TIME=$2
@@ -44,9 +69,18 @@ function Elapse_Time() {
     TIME_START=$END_TIME
 }
 
-# As we run this script in docker environment, we don't need sudo password
-# read -s -p "Enter Password for sudo: " SUDO_PIN
-SUDO_PIN="whatever"
+log_notice "+=================================================+"
+log_notice "THIS SCRIPT SHOULD BE RUN$C_RED INSIDE$C_CYAN A DOCKER CONTAINER"
+log_notice "+=================================================+"
+
+if $READ_SUDO_PIN; then
+    read -s -p "Enter Password for sudo: " SUDO_PIN
+    if [ -z $SUDO_PIN ]; then
+        SUDO_PIN="whatever"
+        echo "W: Missing SUDO Password. Will use default PIN : $SUDO_PIN"
+    fi
+    #echo "SUDO_PIN = $SUDO_PIN"
+fi
 
 echo "========================================"
 echo "I: BUILD_BY         : $BUILD_BY"
@@ -75,25 +109,26 @@ else
     cd $VYOS_BUILD_DIR
 fi
 
-echo ""
-echo "I: Builing VyOS Packages"
-cp ${PATCH_DIR}/configs/arch/arm64/ti_evm_vyos_defconfig ${CWD}/${VYOS_BUILD_DIR}/${VYOS_PKG_DIR}/linux-kernel/arch/arm64/configs/vyos_defconfig
-for package in "${packages[@]}"
-do
+if false; then
     echo ""
-    echo "I: Building package $package.."
-    ./build-packages.sh < /dev/null $VYOS_PKG_DIR/$package
-done
-Elapse_Time "Package build time" $TIME_START
+    echo "I: Builing VyOS Packages"
+    cp ${PATCH_DIR}/configs/arch/arm64/ti_evm_vyos_defconfig ${CWD}/${VYOS_BUILD_DIR}/${VYOS_PKG_DIR}/linux-kernel/arch/arm64/configs/vyos_defconfig
+    for package in "${packages[@]}"
+    do
+        echo ""
+        echo "I: Building package $package.."
+        ./build-packages.sh < /dev/null $VYOS_PKG_DIR/$package
+    done
+    Elapse_Time "Package build time" $TIME_START
+fi
 
-echo ""
-echo "I: Creating VyOS Image"
-# As we run this script in docker environment, we don't need sudo password
-#echo $SUDO_PIN | sudo ./build-image.sh $BUILD_BY $PATCH_DIR
-sudo ./build-image.sh $BUILD_BY $PATCH_DIR
-Elapse_Time "VyOS Image build time" $TIME_START
-
-echo ""
-echo "I: Building BSP Images"
-./build-am64x-boot.sh $PATCH_DIR $SUDO_PIN
-Elapse_Time "BSP Image build time" $TIME_START
+if false; then
+    echo ""
+    echo "I: Creating VyOS Image"
+    if $READ_SUDO_PIN; then
+        sudo -S <<< $SUDO_PIN ./build-image.sh $BUILD_BY $PATCH_DIR
+    else
+        sudo ./build-image.sh $BUILD_BY $PATCH_DIR
+    fi
+    Elapse_Time "VyOS Image build time" $TIME_START
+fi

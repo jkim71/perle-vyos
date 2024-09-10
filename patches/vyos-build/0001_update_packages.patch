@@ -12,7 +12,7 @@ index 23101b27..14db1751 100644
  *.tar
 diff --git a/build-am64x-boot.sh b/build-am64x-boot.sh
 new file mode 100755
-index 00000000..9754f3db
+index 00000000..26b18edd
 --- /dev/null
 +++ b/build-am64x-boot.sh
 @@ -0,0 +1,49 @@
@@ -62,19 +62,36 @@ index 00000000..9754f3db
 +fi
 +
 +echo "I: Building BSP image for \"${TARGET_NAME}\" and creating Package"
-+#As we run this scrpt in docker environment, we don't need sudo password
-+#echo $SUDO_PIN | sudo ./build.sh ${TARGET_NAME}
++# echo "I: Sudo PIN: $SUDO_PIN"
++#sudo -S <<< $SUDO_PIN ./build.sh ${TARGET_NAME}
 +sudo ./build.sh ${TARGET_NAME}
 diff --git a/build-image.sh b/build-image.sh
 new file mode 100755
-index 00000000..51acfb70
+index 00000000..e8299f4a
 --- /dev/null
 +++ b/build-image.sh
-@@ -0,0 +1,53 @@
+@@ -0,0 +1,71 @@
 +#!/bin/bash
 +
 +set -e
 +ROOTDIR=$(pwd)
++
++function copy_parsing() {
++    local SRC=$1
++    local DST=$2
++    for FILE in `ls $SRC`
++    do
++        if [ -d $SRC/$FILE ]; then
++            # echo "$FILE is a directory. Making $DST/$FILE"
++            mkdir -p $DST/$FILE
++            copy_parsing $SRC/$FILE $DST/$FILE
++        else
++            # echo "$FILE is not a directory(file?). Copying to $DST/$FILE"
++            echo "  Copying $SRC/$FILE to $DST/$FILE"
++            cp $SRC/$FILE $DST/$FILE
++        fi
++    done
++}
 +
 +# argument1 => Build-by
 +if [[ -z $1 ]]; then
@@ -118,7 +135,8 @@ index 00000000..51acfb70
 +cat build/fs/boot/vmlinuz* | sh -c 'gunzip -d > build/fs/boot/Image'
 +
 +echo "Copy new default configuration to the vyos image"
-+cp -rf ${PATCH_DIR}/fs/. ${ROOTDIR}/build/fs/
++copy_parsing ${PATCH_DIR}/fs ${ROOTDIR}/build/fs
++#cp -Rf ${PATCH_DIR}/fs/* ${ROOTDIR}/build/fs/
 +#cp -rf ${PATCH_DIR}/fs/usr/share/vyos/config.boot.default ${ROOTDIR}/build/fs/usr/share/vyos/config.boot.default
 +#cp -rf ${PATCH_DIR}/fs/usr/libexec/vyos/conf_mode/system_console.py ${ROOTDIR}/build/fs/usr/libexec/vyos/conf_mode
 +

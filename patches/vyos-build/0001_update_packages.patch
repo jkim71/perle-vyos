@@ -324,6 +324,23 @@ index a3e9257c..481da8d1 100644
  *.tar.xz
  /*.postinst
  
+diff --git a/packages/linux-kernel/build-kernel.sh b/packages/linux-kernel/build-kernel.sh
+index 2c02f5c3..c4613dbb 100755
+--- a/packages/linux-kernel/build-kernel.sh
++++ b/packages/linux-kernel/build-kernel.sh
+@@ -14,8 +14,10 @@ cp -rv arch/ ${KERNEL_SRC}/
+ 
+ cd ${KERNEL_SRC}
+ 
+-echo "I: clean modified files"
+-git reset --hard HEAD
++# It will reset update from patch file (perle-vyos/patches/vyos-build/0001_update_packages.patch)
++# Dont do this!!
++# echo "I: clean modified files"
++# git reset --hard HEAD
+ 
+ KERNEL_VERSION=$(make kernelversion)
+ KERNEL_SUFFIX=-$(dpkg --print-architecture)-vyos
 diff --git a/packages/linux-kernel/build-mwifiex.sh b/packages/linux-kernel/build-mwifiex.sh
 new file mode 100755
 index 00000000..10118134

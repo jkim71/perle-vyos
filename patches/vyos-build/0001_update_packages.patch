@@ -507,6 +507,19 @@ index 19af2c9b..2a63c5f0 100644
  ]
  
  // Start package build using library function from https://github.com/vyos/vyos-build
+diff --git a/packages/podman/Jenkinsfile b/packages/podman/Jenkinsfile
+index cc787565..0b231139 100644
+--- a/packages/podman/Jenkinsfile
++++ b/packages/podman/Jenkinsfile
+@@ -22,7 +22,7 @@
+ 
+ def pkgList = [
+     ['name': 'podman',
+-     'scmCommit': 'v4.9.5',
++     'scmCommit': 'v5.2.2',
+      'scmUrl': 'https://github.com/containers/podman',
+      'buildCmd': 'cd ..; ./build.sh'],
+ ]
 diff --git a/packages/telegraf/build.sh b/packages/telegraf/build.sh
 index 2ba511d0..1ccfea6f 100755
 --- a/packages/telegraf/build.sh

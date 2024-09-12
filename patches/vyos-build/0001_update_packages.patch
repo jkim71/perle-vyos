@@ -271,6 +271,19 @@ index bddd3b63..755dfe7d 100644
       'scmUrl': 'https://salsa.debian.org/kernel-team/ethtool',
       'buildCmd': 'sudo mk-build-deps --install --tool "apt-get --yes --no-install-recommends"; dpkg-buildpackage -uc -us -tc -b'],
  ]
+diff --git a/packages/frr/Jenkinsfile b/packages/frr/Jenkinsfile
+index 441b1681..b7c37267 100644
+--- a/packages/frr/Jenkinsfile
++++ b/packages/frr/Jenkinsfile
+@@ -30,7 +30,7 @@ def pkgList = [
+      'scmUrl': 'https://github.com/rtrlib/rtrlib.git',
+      'buildCmd': 'sudo mk-build-deps --install --tool "apt-get --yes --no-install-recommends"; dpkg-buildpackage -uc -us -tc -b'],
+     ['name': 'frr',
+-     'scmCommit': 'stable/9.1',
++     'scmCommit': 'frr-10.1',
+      'scmUrl': 'https://github.com/FRRouting/frr.git',
+      'buildCmd': 'sudo dpkg -i ../*.deb; sudo mk-build-deps --install --tool "apt-get --yes --no-install-recommends"; cd ..; ./build-frr.sh'],
+ ]
 diff --git a/packages/hsflowd/build.sh b/packages/hsflowd/build.sh
 index 0b00c998..eb845ac0 100755
 --- a/packages/hsflowd/build.sh

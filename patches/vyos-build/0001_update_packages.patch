@@ -12,10 +12,10 @@ index 23101b27..14db1751 100644
  *.tar
 diff --git a/build-am64x-boot.sh b/build-am64x-boot.sh
 new file mode 100755
-index 00000000..26b18edd
+index 00000000..20e1c3bb
 --- /dev/null
 +++ b/build-am64x-boot.sh
-@@ -0,0 +1,49 @@
+@@ -0,0 +1,51 @@
 +#!/bin/bash
 +CWD=$(pwd)
 +
@@ -25,15 +25,14 @@ index 00000000..26b18edd
 +
 +# argument1 => patches folder
 +if [[ -z $1 ]]; then
-+    echo "Missing 1st arguments. ex> $0 <patch dir> <sudo password>"
++    echo "E: Missing 1st arguments. ex> $0 <patch dir> <sudo password>"
 +    exit -1
 +else
 +    PATCH_DIR="$1"
 +fi
 +
 +if [[ -z $2 ]]; then
-+    echo "Missing 2nd arguments. ex> $0 <patch dir> <sudo password>"
-+    exit -1
++    echo "W: Missing 2nd arguments. ex> $0 <patch dir> <sudo password>"
 +else
 +    SUDO_PIN="$2"
 +fi
@@ -62,12 +61,15 @@ index 00000000..26b18edd
 +fi
 +
 +echo "I: Building BSP image for \"${TARGET_NAME}\" and creating Package"
-+# echo "I: Sudo PIN: $SUDO_PIN"
-+#sudo -S <<< $SUDO_PIN ./build.sh ${TARGET_NAME}
-+sudo ./build.sh ${TARGET_NAME}
++if [ -z $SUDO_PIN ]; then
++    sudo ./build.sh ${TARGET_NAME}
++else
++    # echo "I: Sudo PIN: $SUDO_PIN"
++    sudo -S <<< $SUDO_PIN ./build.sh ${TARGET_NAME}
++fi
 diff --git a/build-image.sh b/build-image.sh
 new file mode 100755
-index 00000000..e8299f4a
+index 00000000..c16dfc0c
 --- /dev/null
 +++ b/build-image.sh
 @@ -0,0 +1,71 @@
@@ -76,7 +78,7 @@ index 00000000..e8299f4a
 +set -e
 +ROOTDIR=$(pwd)
 +
-+function copy_parsing() {
++function recursive_copy_file_folder() {
 +    local SRC=$1
 +    local DST=$2
 +    for FILE in `ls $SRC`
@@ -87,8 +89,8 @@ index 00000000..e8299f4a
 +            copy_parsing $SRC/$FILE $DST/$FILE
 +        else
 +            # echo "$FILE is not a directory(file?). Copying to $DST/$FILE"
-+            echo "  Copying $SRC/$FILE to $DST/$FILE"
-+            cp $SRC/$FILE $DST/$FILE
++            # echo "  Copying $SRC/$FILE to $DST/$FILE"
++            cp -av $SRC/$FILE $DST/$FILE
 +        fi
 +    done
 +}
@@ -135,7 +137,7 @@ index 00000000..e8299f4a
 +cat build/fs/boot/vmlinuz* | sh -c 'gunzip -d > build/fs/boot/Image'
 +
 +echo "Copy new default configuration to the vyos image"
-+copy_parsing ${PATCH_DIR}/fs ${ROOTDIR}/build/fs
++recursive_copy_file_folder ${PATCH_DIR}/fs ${ROOTDIR}/build/fs
 +#cp -Rf ${PATCH_DIR}/fs/* ${ROOTDIR}/build/fs/
 +#cp -rf ${PATCH_DIR}/fs/usr/share/vyos/config.boot.default ${ROOTDIR}/build/fs/usr/share/vyos/config.boot.default
 +#cp -rf ${PATCH_DIR}/fs/usr/libexec/vyos/conf_mode/system_console.py ${ROOTDIR}/build/fs/usr/libexec/vyos/conf_mode
@@ -338,10 +340,27 @@ index a3e9257c..481da8d1 100644
  /*.postinst
  
 diff --git a/packages/linux-kernel/build-kernel.sh b/packages/linux-kernel/build-kernel.sh
-index 2c02f5c3..c4613dbb 100755
+index 2c02f5c3..ec5baca3 100755
 --- a/packages/linux-kernel/build-kernel.sh
 +++ b/packages/linux-kernel/build-kernel.sh
-@@ -14,8 +14,10 @@ cp -rv arch/ ${KERNEL_SRC}/
+@@ -2,6 +2,7 @@
+ CWD=$(pwd)
+ KERNEL_SRC=linux
+ 
++FRESH_BUILD=true
+ set -e
+ 
+ if [ ! -d ${KERNEL_SRC} ]; then
+@@ -9,39 +10,45 @@ if [ ! -d ${KERNEL_SRC} ]; then
+     exit 1
+ fi
+ 
+-echo "I: Copy Kernel config (x86_64_vyos_defconfig) to Kernel Source"
+-cp -rv arch/ ${KERNEL_SRC}/
++if $FRESH_BUILD; then
++    echo "I: Copy Kernel config (x86_64_vyos_defconfig) to Kernel Source"
++    cp -rv arch/ ${KERNEL_SRC}/
++fi
  
  cd ${KERNEL_SRC}
  
@@ -354,17 +373,59 @@ index 2c02f5c3..c4613dbb 100755
  
  KERNEL_VERSION=$(make kernelversion)
  KERNEL_SUFFIX=-$(dpkg --print-architecture)-vyos
+ 
++if $FRESH_BUILD; then
+ # VyOS requires some small Kernel Patches - apply them here
+ # It's easier to habe them here and make use of the upstream
+ # repository instead of maintaining a full Kernel Fork.
+ # Saving time/resources is essential :-)
+-PATCH_DIR=${CWD}/patches/kernel
+-for patch in $(ls ${PATCH_DIR})
+-do
+-    echo "I: Apply Kernel patch: ${PATCH_DIR}/${patch}"
+-    patch -p1 < ${PATCH_DIR}/${patch}
+-done
+-
+-echo "I: make vyos_defconfig"
+-# Select Kernel configuration - currently there is only one
+-make vyos_defconfig
+-
+-echo "I: Generate environment file containing Kernel variable"
+-cat << EOF >${CWD}/kernel-vars
++    PATCH_DIR=${CWD}/patches/kernel
++    for patch in $(ls ${PATCH_DIR})
++    do
++        echo "I: Apply Kernel patch: ${PATCH_DIR}/${patch}"
++        patch -p1 < ${PATCH_DIR}/${patch}
++    done
++
++    echo "I: make vyos_defconfig"
++    # Select Kernel configuration - currently there is only one
++    make vyos_defconfig
++
++    echo "I: Generate environment file containing Kernel variable"
++    cat << EOF >${CWD}/kernel-vars
+ #!/bin/sh
+ export KERNEL_VERSION=${KERNEL_VERSION}
+ export KERNEL_SUFFIX=${KERNEL_SUFFIX}
+ export KERNEL_DIR=${CWD}/${KERNEL_SRC}
+ EOF
++fi
+ 
+ echo "I: Build Debian Kernel package"
+ touch .scmversion
 diff --git a/packages/linux-kernel/build-mwifiex.sh b/packages/linux-kernel/build-mwifiex.sh
 new file mode 100755
-index 00000000..10118134
+index 00000000..af2aa78b
 --- /dev/null
 +++ b/packages/linux-kernel/build-mwifiex.sh
-@@ -0,0 +1,31 @@
+@@ -0,0 +1,32 @@
 +#!/bin/sh
 +CWD=$(pwd)
 +PATCH_DIR=$(dirname $(dirname $(dirname ${CWD})))/patches
 +IMX_FIRMWARE_REPO="https://github.com/nxp-imx/imx-firmware.git"
-+IMX_FIRMWARE_BRANCH="lf-6.6.3_1.0.0"
++# IMX_FIRMWARE_BRANCH="lf-6.6.3_1.0.0"
++IMX_FIRMWARE_BRANCH=$1
 +
 +MWIFIEX_SRC=${CWD}/mwifiex
 +if [ ! -d ${MWIFIEX_SRC} ]; then
@@ -392,8 +453,8 @@ index 00000000..10118134
 +echo "Copying wifi_mod_para.conf file to ${PATCH_DIR}/fs/lib/firmware/nxp/"
 +cp -rf ${FIRMWARE_SRC}/nxp/wifi_mod_para.conf ${PATCH_DIR}/fs/lib/firmware/nxp/
 diff --git a/packages/linux-kernel/perle-Jenkinsfile b/packages/linux-kernel/perle-Jenkinsfile
-new file mode 100644
-index 00000000..5b048e7a
+new file mode 100755
+index 00000000..e90de7e1
 --- /dev/null
 +++ b/packages/linux-kernel/perle-Jenkinsfile
 @@ -0,0 +1,85 @@
@@ -470,8 +531,8 @@ index 00000000..5b048e7a
 +    // NXP 88Q9098/88W9098
 +    ['name': 'mwifiex',
 +     'scmCommit': 'lf-6.6.3_1.0.0',
-+     'scmUrl': 'https://github.com/johnlfeeney/mwifiex.git',
-+     'buildCmd': 'cd ..; ./build-mwifiex.sh'],
++     'scmUrl': 'https://github.com/nxp-imx/mwifiex.git',
++     'buildCmd': 'cd ..; ./build-mwifiex.sh lf-6.6.3_1.0.0'],
 +
 +         // Debian
 +    ['name': 'debian-repos',
@@ -639,3 +700,27 @@ index 5fd2ad64..4eb22ba4 100644
 @@ -1 +1 @@
 -wide-dhcpv6/
 +wide-dhcpv6*
+diff --git a/scripts/image-build/build-vyos-image b/scripts/image-build/build-vyos-image
+index a0acd184..39cabe1d 100755
+--- a/scripts/image-build/build-vyos-image
++++ b/scripts/image-build/build-vyos-image
+@@ -359,6 +359,7 @@ if __name__ == "__main__":
+ 
+     if build_config["reuse_iso"]:
+         iso_file = build_config["reuse_iso"]
++        print(f"I: reuse iso file : {iso_file}")
+     else:
+         ## Create the version file
+ 
+diff --git a/scripts/image-build/defaults.py b/scripts/image-build/defaults.py
+index a0c5c8bf..e1af6fe4 100644
+--- a/scripts/image-build/defaults.py
++++ b/scripts/image-build/defaults.py
+@@ -38,6 +38,7 @@ HARDCODED_BUILD = {
+     'custom_apt_key': [],
+     'custom_package': [],
+     'reuse_iso': None,
++#    'reuse_iso': 'live-image-arm64.hybrid.iso',
+     'disk_size': 10,
+     'build_by': get_default_build_by(),
+     'build_comment': '',

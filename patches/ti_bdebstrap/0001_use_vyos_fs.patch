@@ -1,5 +1,36 @@
+diff --git a/create-sdcard.sh b/create-sdcard.sh
+index a1b1190..1a73674 100755
+--- a/create-sdcard.sh
++++ b/create-sdcard.sh
+@@ -45,7 +45,7 @@ export LANG=C
+ PWD=`pwd`
+ EXE=`echo $0 | sed s=$PWD==`
+ EXEPATH="$PWD"/"$EXE"
+-clear
++#clear
+ 
+ build=${1}
+ PARSEPATH=./build/${build}
+diff --git a/scripts/build_bsp.sh b/scripts/build_bsp.sh
+index 1d420a3..38adfae 100755
+--- a/scripts/build_bsp.sh
++++ b/scripts/build_bsp.sh
+@@ -89,10 +89,10 @@ bsp_version=$3
+     FW_DIR=${topdir}/build/${build}/bsp_sources/ti-linux-firmware
+ 
+     log "> BSP sources: cloned"
+-    log "> BSP sources: creating backup .."
++    #log "> BSP sources: creating backup .."
+     cd ${topdir}/build/${build}
+-    tar --use-compress-program="pigz --best --recursive | pv" -cf bsp_sources.tar.xz bsp_sources &>>"${LOG_FILE}"
+-    log "> BSP sources: backup created .."
++    #tar --use-compress-program="pigz --best --recursive | pv" -cf bsp_sources.tar.xz bsp_sources &>>"${LOG_FILE}"
++    #log "> BSP sources: backup created .."
+ 
+     mkdir -p tisdk-debian-${distro}-boot
+ }
 diff --git a/scripts/build_distro.sh b/scripts/build_distro.sh
-index 6e2a4ae..293b4ca 100755
+index 6e2a4ae..3ef35e8 100755
 --- a/scripts/build_distro.sh
 +++ b/scripts/build_distro.sh
 @@ -7,20 +7,30 @@ distro=$1
@@ -47,3 +78,19 @@ index 6e2a4ae..293b4ca 100755
  }
  
  function package_and_clean() {
+@@ -35,11 +45,11 @@ build=$1
+     tar --use-compress-program="pigz --best --recursive | pv" -cf tisdk-debian-${distro}-boot.tar.xz tisdk-debian-${distro}-boot &>>"${LOG_FILE}"
+     rm -rf tisdk-debian-${distro}-boot
+ 
+-    rm -rf bsp_sources
++    # rm -rf bsp_sources
+ 
+-    cd ${topdir}/build/
++    #cd ${topdir}/build/
+ 
+-    log "> Packaging ${build}"
+-    tar --use-compress-program="pigz --best --recursive | pv" -cf ${build}.tar.xz ${build} &>>"${LOG_FILE}"
++    #log "> Packaging ${build}"
++    #tar --use-compress-program="pigz --best --recursive | pv" -cf ${build}.tar.xz ${build} &>>"${LOG_FILE}"
+ }
+ 

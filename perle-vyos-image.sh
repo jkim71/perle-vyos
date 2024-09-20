@@ -69,6 +69,23 @@ function Elapse_Time() {
     TIME_START=$END_TIME
 }
 
+function recursive_copy_file_folder() {
+    local SRC=$1
+    local DST=$2
+    for FILE in `ls $SRC`
+    do
+        if [ -d $SRC/$FILE ]; then
+            # echo "$FILE is a directory. Making $DST/$FILE"
+            mkdir -p $DST/$FILE
+            copy_parsing $SRC/$FILE $DST/$FILE
+        else
+            # echo "$FILE is not a directory(file?). Copying to $DST/$FILE"
+            # echo "  Copying $SRC/$FILE to $DST/$FILE"
+            cp -av $SRC/$FILE $DST/$FILE
+        fi
+    done
+}
+
 log_notice "+=================================================+"
 log_notice "THIS SCRIPT SHOULD BE RUN$C_RED INSIDE$C_CYAN A DOCKER CONTAINER"
 log_notice "+=================================================+"
@@ -109,10 +126,11 @@ else
     cd $VYOS_BUILD_DIR
 fi
 
-if true; then
+if false; then
     echo ""
     echo "I: Builing VyOS Packages"
-    cp ${PATCH_DIR}/configs/arch/arm64/ti_evm_vyos_defconfig ${CWD}/${VYOS_BUILD_DIR}/${VYOS_PKG_DIR}/linux-kernel/arch/arm64/configs/vyos_defconfig
+    recursive_copy_file_folder ${PATCH_DIR}/linux-kernel/arch ${CWD}/${VYOS_BUILD_DIR}/${VYOS_PKG_DIR}/linux-kernel/arch 
+    #cp ${PATCH_DIR}/configs/arch/arm64/ti_evm_vyos_defconfig ${CWD}/${VYOS_BUILD_DIR}/${VYOS_PKG_DIR}/linux-kernel/arch/arm64/configs/vyos_defconfig
     for package in "${packages[@]}"
     do
         echo ""

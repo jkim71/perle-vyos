@@ -1,5 +1,5 @@
 diff --git a/.gitignore b/.gitignore
-index 23101b27..14db1751 100644
+index e3724a9f..ff2dc9c2 100644
 --- a/.gitignore
 +++ b/.gitignore
 @@ -5,6 +5,7 @@ packer_cache/*
@@ -7,9 +7,9 @@ index 23101b27..14db1751 100644
  packages/*
  !packages/*/
 +ti-bdebstrap/
- testinstall*.img
- *.qcow2
- *.tar
+ data/live-build-config/includes.chroot/var/lib/shim-signed/mok/*
+ /testinstall*.img
+ /testinstall*.efivars
 diff --git a/build-am64x-boot.sh b/build-am64x-boot.sh
 new file mode 100755
 index 00000000..20e1c3bb
@@ -260,19 +260,6 @@ index cbf5a407..7bdb643e 100644
  ]
  
  // Start package build using library function from https://github.com/vyos/vyos-build
-diff --git a/packages/ethtool/Jenkinsfile b/packages/ethtool/Jenkinsfile
-index bddd3b63..755dfe7d 100644
---- a/packages/ethtool/Jenkinsfile
-+++ b/packages/ethtool/Jenkinsfile
-@@ -22,7 +22,7 @@
- 
- def pkgList = [
-     ['name': 'ethtool',
--     'scmCommit': 'debian/1%6.6-1',
-+     'scmCommit': 'debian/1%6.10-1',
-      'scmUrl': 'https://salsa.debian.org/kernel-team/ethtool',
-      'buildCmd': 'sudo mk-build-deps --install --tool "apt-get --yes --no-install-recommends"; dpkg-buildpackage -uc -us -tc -b'],
- ]
 diff --git a/packages/frr/Jenkinsfile b/packages/frr/Jenkinsfile
 index 441b1681..b7c37267 100644
 --- a/packages/frr/Jenkinsfile
@@ -340,7 +327,7 @@ index a3e9257c..481da8d1 100644
  /*.postinst
  
 diff --git a/packages/linux-kernel/build-kernel.sh b/packages/linux-kernel/build-kernel.sh
-index 2c02f5c3..ec5baca3 100755
+index f7b0c597..e85e9e03 100755
 --- a/packages/linux-kernel/build-kernel.sh
 +++ b/packages/linux-kernel/build-kernel.sh
 @@ -2,6 +2,7 @@
@@ -351,7 +338,7 @@ index 2c02f5c3..ec5baca3 100755
  set -e
  
  if [ ! -d ${KERNEL_SRC} ]; then
-@@ -9,39 +10,45 @@ if [ ! -d ${KERNEL_SRC} ]; then
+@@ -9,62 +10,68 @@ if [ ! -d ${KERNEL_SRC} ]; then
      exit 1
  fi
  
@@ -372,37 +359,82 @@ index 2c02f5c3..ec5baca3 100755
 +# git reset --hard HEAD
  
  KERNEL_VERSION=$(make kernelversion)
- KERNEL_SUFFIX=-$(dpkg --print-architecture)-vyos
+ KERNEL_SUFFIX=-$(awk -F "= " '/kernel_flavor/ {print $2}' ../../../data/defaults.toml | tr -d \")
+ KERNEL_CONFIG=arch/x86/configs/vyos_defconfig
  
-+if $FRESH_BUILD; then
- # VyOS requires some small Kernel Patches - apply them here
- # It's easier to habe them here and make use of the upstream
- # repository instead of maintaining a full Kernel Fork.
- # Saving time/resources is essential :-)
+-# VyOS requires some small Kernel Patches - apply them here
+-# It's easier to habe them here and make use of the upstream
+-# repository instead of maintaining a full Kernel Fork.
+-# Saving time/resources is essential :-)
 -PATCH_DIR=${CWD}/patches/kernel
 -for patch in $(ls ${PATCH_DIR})
 -do
 -    echo "I: Apply Kernel patch: ${PATCH_DIR}/${patch}"
 -    patch -p1 < ${PATCH_DIR}/${patch}
 -done
--
--echo "I: make vyos_defconfig"
--# Select Kernel configuration - currently there is only one
--make vyos_defconfig
--
--echo "I: Generate environment file containing Kernel variable"
--cat << EOF >${CWD}/kernel-vars
++if $FRESH_BUILD; then
++    # VyOS requires some small Kernel Patches - apply them here
++    # It's easier to habe them here and make use of the upstream
++    # repository instead of maintaining a full Kernel Fork.
++    # Saving time/resources is essential :-)
 +    PATCH_DIR=${CWD}/patches/kernel
 +    for patch in $(ls ${PATCH_DIR})
 +    do
 +        echo "I: Apply Kernel patch: ${PATCH_DIR}/${patch}"
 +        patch -p1 < ${PATCH_DIR}/${patch}
 +    done
-+
+ 
+-TRUSTED_KEYS_FILE=trusted_keys.pem
+-# start with empty key file
+-echo -n "" > $TRUSTED_KEYS_FILE
+-CERTS=$(find ../../../data/live-build-config/includes.chroot/var/lib/shim-signed/mok -name "*.pem" -type f)
+-if [ ! -z "${CERTS}" ]; then
+-  # add known public keys to Kernel certificate chain
+-  for file in $CERTS; do
+-    cat $file >> $TRUSTED_KEYS_FILE
+-  done
++    TRUSTED_KEYS_FILE=trusted_keys.pem
++    # start with empty key file
++    echo -n "" > $TRUSTED_KEYS_FILE
++    CERTS=$(find ../../../data/live-build-config/includes.chroot/var/lib/shim-signed/mok -name "*.pem" -type f)
++    if [ ! -z "${CERTS}" ]; then
++      # add known public keys to Kernel certificate chain
++      for file in $CERTS; do
++       cat $file >> $TRUSTED_KEYS_FILE
++      done
+ 
+-  # Force Kernel module signing and embed public keys
+-  echo "CONFIG_MODULE_SIG_FORMAT=y" >> $KERNEL_CONFIG
+-  echo "CONFIG_MODULE_SIG=y" >> $KERNEL_CONFIG
+-  echo "CONFIG_MODULE_SIG_FORCE=y" >> $KERNEL_CONFIG
+-  echo "# CONFIG_MODULE_SIG_ALL is not set" >> $KERNEL_CONFIG
+-  echo "CONFIG_MODULE_SIG_SHA512=y" >> $KERNEL_CONFIG
+-  echo "CONFIG_MODULE_SIG_HASH=\"sha512\"" >> $KERNEL_CONFIG
+-  echo "CONFIG_MODULE_SIG_KEY=\"\"" >> $KERNEL_CONFIG
+-  echo "CONFIG_MODULE_SIG_KEY_TYPE_RSA=y" >> $KERNEL_CONFIG
+-  echo "CONFIG_SYSTEM_TRUSTED_KEYS=\"$TRUSTED_KEYS_FILE\"" >> $KERNEL_CONFIG
+-fi
++      # Force Kernel module signing and embed public keys
++      echo "CONFIG_MODULE_SIG_FORMAT=y" >> $KERNEL_CONFIG
++      echo "CONFIG_MODULE_SIG=y" >> $KERNEL_CONFIG
++      echo "CONFIG_MODULE_SIG_FORCE=y" >> $KERNEL_CONFIG
++      echo "# CONFIG_MODULE_SIG_ALL is not set" >> $KERNEL_CONFIG
++      echo "CONFIG_MODULE_SIG_SHA512=y" >> $KERNEL_CONFIG
++      echo "CONFIG_MODULE_SIG_HASH=\"sha512\"" >> $KERNEL_CONFIG
++      echo "CONFIG_MODULE_SIG_KEY=\"\"" >> $KERNEL_CONFIG
++      echo "CONFIG_MODULE_SIG_KEY_TYPE_RSA=y" >> $KERNEL_CONFIG
++      echo "CONFIG_SYSTEM_TRUSTED_KEYS=\"$TRUSTED_KEYS_FILE\"" >> $KERNEL_CONFIG
++    fi
+ 
+-echo "I: make vyos_defconfig"
+-# Select Kernel configuration - currently there is only one
+-make vyos_defconfig
 +    echo "I: make vyos_defconfig"
 +    # Select Kernel configuration - currently there is only one
 +    make vyos_defconfig
-+
+ 
+-echo "I: Generate environment file containing Kernel variable"
+-cat << EOF >${CWD}/kernel-vars
 +    echo "I: Generate environment file containing Kernel variable"
 +    cat << EOF >${CWD}/kernel-vars
  #!/bin/sh
@@ -701,13 +733,13 @@ index 5fd2ad64..4eb22ba4 100644
 -wide-dhcpv6/
 +wide-dhcpv6*
 diff --git a/scripts/image-build/build-vyos-image b/scripts/image-build/build-vyos-image
-index a0acd184..39cabe1d 100755
+index c1711a5c..3fe41038 100755
 --- a/scripts/image-build/build-vyos-image
 +++ b/scripts/image-build/build-vyos-image
-@@ -359,6 +359,7 @@ if __name__ == "__main__":
- 
+@@ -379,6 +379,7 @@ if __name__ == "__main__":
      if build_config["reuse_iso"]:
          iso_file = build_config["reuse_iso"]
+         manifest["artifacts"] = [iso_file]
 +        print(f"I: reuse iso file : {iso_file}")
      else:
          ## Create the version file

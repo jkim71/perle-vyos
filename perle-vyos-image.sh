@@ -126,7 +126,7 @@ else
     cd $VYOS_BUILD_DIR
 fi
 
-if false; then
+if true; then
     echo ""
     echo "I: Builing VyOS Packages"
     recursive_copy_file_folder ${PATCH_DIR}/linux-kernel/arch ${CWD}/${VYOS_BUILD_DIR}/${VYOS_PKG_DIR}/linux-kernel/arch 

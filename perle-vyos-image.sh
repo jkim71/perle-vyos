@@ -77,7 +77,7 @@ function recursive_copy_file_folder() {
         if [ -d $SRC/$FILE ]; then
             # echo "$FILE is a directory. Making $DST/$FILE"
             mkdir -p $DST/$FILE
-            copy_parsing $SRC/$FILE $DST/$FILE
+            recursive_copy_file_folder $SRC/$FILE $DST/$FILE
         else
             # echo "$FILE is not a directory(file?). Copying to $DST/$FILE"
             # echo "  Copying $SRC/$FILE to $DST/$FILE"

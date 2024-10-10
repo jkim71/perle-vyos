@@ -22,6 +22,7 @@ PATCH_DIR=${CWD}/patches
 set -e
 
 packages=(
+    "chrony"
     "isc-dhcp"
     "frr"
     "linux-kernel"
@@ -113,8 +114,10 @@ if [ ! -d $VYOS_BUILD_DIR ]; then
     echo "I: Clone VyOS build packages"
     git clone https://github.com/vyos/vyos-build.git -b current $VYOS_BUILD_DIR
 
+    recursive_copy_file_folder ${PATCH_DIR}/$VYOS_BUILD_DIR/updates ${CWD}/${VYOS_BUILD_DIR}/
+
     cd $VYOS_BUILD_DIR
-    VYOS_BUILD_PATCH=$PATCH_DIR/$VYOS_BUILD_DIR
+    VYOS_BUILD_PATCH=$PATCH_DIR/$VYOS_BUILD_DIR/patches
     for patch in $(ls ${VYOS_BUILD_PATCH})
     do
         echo ""

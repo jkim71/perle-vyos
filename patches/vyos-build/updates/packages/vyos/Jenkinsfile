@@ -1,0 +1,91 @@
+// Copyright (C) 2024 VyOS maintainers and contributors
+//
+// This program is free software; you can redistribute it and/or modify
+// in order to easy exprort images built to "external" world
+// it under the terms of the GNU General Public License version 2 or later as
+// published by the Free Software Foundation.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+@NonCPS
+
+// Using a version specifier library, use 'current' branch. The underscore (_)
+// is not a typo! You need this underscore if the line immediately after the
+// @Library annotation is not an import statement!
+@Library('vyos-build@current')_
+
+def pkgList = [
+    ['name': 'vyos-1x',
+     'scmCommit': 'current',
+     'scmUrl': 'https://github.com/vyos/vyos-1x',
+     'buildCmd': 'dpkg-buildpackage -uc -us -tc -b'],
+
+    ['name': 'vyos-user-utils',
+     'scmCommit': 'current',
+     'scmUrl': 'https://github.com/vyos/vyos-user-utils.git',
+     'buildCmd': 'dpkg-buildpackage -uc -us -tc -b'],
+
+    ['name': 'vyos-xe-guest-utilities',
+     'scmCommit': 'current',
+     'scmUrl': 'https://github.com/vyos/vyos-xe-guest-utilities.git',
+     'buildCmd': 'dpkg-buildpackage -b -us -uc -tc'],
+
+    ['name': 'libvyosconfig',
+     'scmCommit': 'master',
+     'scmUrl': 'https://github.com/vyos/libvyosconfig.git',
+     'buildCmd': 'eval $(opam env --root=/opt/opam --set-root) && dpkg-buildpackage -b -us -uc -tc'],
+
+    ['name': 'vyatta-bash',
+     'scmCommit': 'current',
+     'scmUrl': 'https://github.com/vyos/vyatta-bash.git',
+     'buildCmd': 'dpkg-buildpackage -b -us -uc -tc'],
+
+    ['name': 'udp-broadcast-relay',
+     'scmCommit': 'current',
+     'scmUrl': 'https://github.com/vyos/udp-broadcast-relay.git',
+     'buildCmd': 'dpkg-buildpackage -b -us -uc -tc'],
+
+    ['name': 'ipaddrcheck',
+     'scmCommit': 'current',
+     'scmUrl': 'https://github.com/vyos/ipaddrcheck.git',
+     'buildCmd': 'dpkg-buildpackage -b -us -uc -tc'],
+
+    ['name': 'hvinfo',
+     'scmCommit': 'current',
+     'scmUrl': 'https://github.com/vyos/hvinfo.git',
+     'buildCmd': 'dpkg-buildpackage -b -us -uc -tc'],
+
+    ['name': 'vyatta-biosdevname',
+     'scmCommit': 'current',
+     'scmUrl': 'https://github.com/vyos/vyatta-biosdevname.git',
+     'buildCmd': 'dpkg-buildpackage -b -us -uc -tc'],
+
+    ['name': 'vyatta-cfg',
+     'scmCommit': 'current',
+     'scmUrl': 'https://github.com/vyos/vyatta-cfg.git',
+     'buildCmd': 'dpkg-buildpackage -b -us -uc -tc'],
+
+    ['name': 'vyos-http-api-tools',
+     'scmCommit': 'current',
+     'scmUrl': 'https://github.com/vyos/vyos-http-api-tools.git',
+     'buildCmd': 'dpkg-buildpackage -b -us -uc -tc'],
+
+    ['name': 'vyos-utils',
+     'scmCommit': 'current',
+     'scmUrl': 'https://github.com/vyos/vyos-utils.git',
+     'buildCmd': 'dpkg-buildpackage -b -us -uc -tc'],
+
+    ['name': 'vyatta-wanloadbalance',
+     'scmCommit': 'current',
+     'scmUrl': 'https://github.com/vyos/vyatta-wanloadbalance.git',
+     'buildCmd': 'dpkg-buildpackage -b -us -uc -tc'],
+]
+
+// Start package build using library function from https://github.com/vyos/vyos-build
+buildPackage('vyos', pkgList, null, false, "**/packages/vyos/**")

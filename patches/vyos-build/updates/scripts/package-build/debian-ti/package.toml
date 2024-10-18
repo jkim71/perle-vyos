@@ -1,0 +1,5 @@
+[[packages]]
+name = "debian-repos"
+commit_id = "09.02.00.009-update"
+scm_url = "https://github.com/TexasInstruments/debian-repos.git"
+build_cmd = "./run.sh ti-linux-firmware; cp -rf build/bookworm/ti-linux-firmware/*64*.deb .."

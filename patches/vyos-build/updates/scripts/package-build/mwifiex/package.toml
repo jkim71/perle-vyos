@@ -1,0 +1,5 @@
+[[packages]]
+name = "mwifiex"
+commit_id = "lf-6.6.3_1.0.0"
+scm_url = "https://github.com/nxp-imx/mwifiex.git"
+build_cmd = "../build-mwifiex.sh lf-6.6.3_1.0.0"

@@ -17,20 +17,41 @@ READ_SUDO_PIN=false
 # BASE_DIR=$(dirname ${CWD})
 BUILD_BY="$(git config user.email)"
 VYOS_BUILD_DIR=vyos-build
-VYOS_PKG_DIR=packages
+VYOS_PKG_DIR=scripts/package-build
 PATCH_DIR=${CWD}/patches
 set -e
 
 packages=(
-    "chrony"
-    "isc-dhcp"
+    "aws-gwlbtun"
+#    "ddclient"
+#    "dropbear"
+#    "ethtool"
+    "vyos"
     "frr"
-    "linux-kernel"
+    "frr_exporter"
+#    "hostap"
+#    "hsflowd"
+#    "isc-dhcp"
+#    "kea"
+#    "keepalived"
+#    "ndppd"
+#    "netfilter"
+#    "net-snmp"
+    "node_exporter"
+    "opennhrp"
+    "openvpn-otp"
     "owamp"
+#    "pam_tacplus"
+#    "pmacct"
     "podman"
+#    "pyhumps"
+#    "radvd"
     "strongswan"
     "telegraf"
-    "vyos"
+#    "waagent"
+#    "wide-dhcpv6"
+#    "xen-guest-agent"
+    "linux-kernel"
 )
 
 #if [ "$EUID" -ne 0 ] ; then
@@ -114,36 +135,37 @@ if [ ! -d $VYOS_BUILD_DIR ]; then
     echo "I: Clone VyOS build packages"
     git clone https://github.com/vyos/vyos-build.git -b current $VYOS_BUILD_DIR
 
-    recursive_copy_file_folder ${PATCH_DIR}/$VYOS_BUILD_DIR/updates ${CWD}/${VYOS_BUILD_DIR}/
+    if true; then
+        recursive_copy_file_folder ${PATCH_DIR}/$VYOS_BUILD_DIR/updates ${CWD}/${VYOS_BUILD_DIR}/
 
-    cd $VYOS_BUILD_DIR
-    VYOS_BUILD_PATCH=$PATCH_DIR/$VYOS_BUILD_DIR/patches
-    for patch in $(ls ${VYOS_BUILD_PATCH})
-    do
-        echo ""
-        echo "I: Apply patch: ${VYOS_BUILD_PATCH}/${patch}"
-        patch -p1 < ${VYOS_BUILD_PATCH}/${patch}
-    done
+        cd ${CWD}/${VYOS_BUILD_DIR}
+        VYOS_BUILD_PATCH=$PATCH_DIR/$VYOS_BUILD_DIR/patches
+        for patch in $(ls ${VYOS_BUILD_PATCH})
+        do
+            echo ""
+            echo "I: Apply patch: ${VYOS_BUILD_PATCH}/${patch}"
+            patch -p1 < ${VYOS_BUILD_PATCH}/${patch}
+        done
+    fi
     Elapse_Time "$VYOS_BUILD_DIR set-up time" $TIME_START
-else
-    cd $VYOS_BUILD_DIR
 fi
 
 if true; then
+    cd ${CWD}/${VYOS_BUILD_DIR}
     echo ""
     echo "I: Builing VyOS Packages"
-    recursive_copy_file_folder ${PATCH_DIR}/linux-kernel/arch ${CWD}/${VYOS_BUILD_DIR}/${VYOS_PKG_DIR}/linux-kernel/arch 
-    #cp ${PATCH_DIR}/configs/arch/arm64/ti_evm_vyos_defconfig ${CWD}/${VYOS_BUILD_DIR}/${VYOS_PKG_DIR}/linux-kernel/arch/arm64/configs/vyos_defconfig
+    recursive_copy_file_folder ${PATCH_DIR}/linux-kernel/arch ${CWD}/${VYOS_BUILD_DIR}/${VYOS_PKG_DIR}/linux-kernel/arch
     for package in "${packages[@]}"
     do
         echo ""
         echo "I: Building package $package.."
-        ./build-packages.sh < /dev/null $VYOS_PKG_DIR/$package
+        ./build-scripts-packages.sh < /dev/null $VYOS_PKG_DIR/$package
     done
     Elapse_Time "Package build time" $TIME_START
 fi
 
 if true; then
+    cd ${CWD}/${VYOS_BUILD_DIR}
     echo ""
     echo "I: Creating VyOS Image"
     if $READ_SUDO_PIN; then

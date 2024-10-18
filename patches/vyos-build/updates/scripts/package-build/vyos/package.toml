@@ -1,0 +1,65 @@
+[[packages]]
+name = "ipaddrcheck"
+commit_id = "current"
+scm_url = "https://github.com/vyos/ipaddrcheck.git"
+build_cmd = "autoreconf -i; ./configure; dpkg-buildpackage -uc -us -tc -b"
+
+[[packages]]
+name = "vyos-1x"
+commit_id = "current"
+scm_url = "https://github.com/vyos/vyos-1x"
+
+[[packages]]
+name = "vyatta-bash"
+commit_id = "current"
+scm_url = "https://github.com/vyos/vyatta-bash.git"
+
+[[packages]]
+name = "vyos-user-utils"
+commit_id = "current"
+scm_url = "https://github.com/vyos/vyos-user-utils.git"
+
+[[packages]]
+name = "vyatta-biosdevname"
+commit_id = "current"
+scm_url = "https://github.com/vyos/vyatta-biosdevname.git"
+
+[[packages]]
+name = "libvyosconfig"
+commit_id = "current"
+scm_url = "https://github.com/vyos/libvyosconfig.git"
+
+[[packages]]
+name = "vyatta-cfg"
+commit_id = "current"
+scm_url = "https://github.com/vyos/vyatta-cfg.git"
+
+[[packages]]
+name = "vyos-http-api-tools"
+commit_id = "current"
+scm_url = "https://github.com/vyos/vyos-http-api-tools.git"
+
+[[packages]]
+name = "vyos-utils"
+commit_id = "current"
+scm_url = "https://github.com/vyos/vyos-utils.git"
+
+[[packages]]
+name = "vyatta-wanloadbalance"
+commit_id = "current"
+scm_url = "https://github.com/vyos/vyatta-wanloadbalance.git"
+
+[[packages]]
+name = "vyos-xe-guest-utilities"
+commit_id = "current"
+scm_url = "https://github.com/vyos/vyos-xe-guest-utilities.git"
+
+[[packages]]
+name = "udp-broadcast-relay"
+commit_id = "current"
+scm_url = "https://github.com/vyos/udp-broadcast-relay.git"
+
+[[packages]]
+name = "hvinfo"
+commit_id = "current"
+scm_url = "https://github.com/vyos/hvinfo.git"

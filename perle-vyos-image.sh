@@ -22,13 +22,13 @@ PATCH_DIR=${CWD}/patches
 set -e
 
 packages=(
-    "aws-gwlbtun"
+#    "vyos"
+#    "aws-gwlbtun"
 #    "ddclient"
 #    "dropbear"
 #    "ethtool"
-    "vyos"
-    "frr"
-    "frr_exporter"
+#    "frr"
+#    "frr_exporter"
 #    "hostap"
 #    "hsflowd"
 #    "isc-dhcp"
@@ -37,17 +37,17 @@ packages=(
 #    "ndppd"
 #    "netfilter"
 #    "net-snmp"
-    "node_exporter"
-    "opennhrp"
-    "openvpn-otp"
-    "owamp"
+#    "node_exporter"
+#    "opennhrp"
+#    "openvpn-otp"
+#    "owamp"
 #    "pam_tacplus"
 #    "pmacct"
-    "podman"
+#    "podman"
 #    "pyhumps"
 #    "radvd"
-    "strongswan"
-    "telegraf"
+#    "strongswan"
+#    "telegraf"
 #    "waagent"
 #    "wide-dhcpv6"
 #    "xen-guest-agent"
@@ -151,6 +151,7 @@ if [ ! -d $VYOS_BUILD_DIR ]; then
 fi
 
 if true; then
+    cp -rvf ${CWD}/packages/*.deb ${CWD}/${VYOS_BUILD_DIR}/packages
     cd ${CWD}/${VYOS_BUILD_DIR}
     echo ""
     echo "I: Builing VyOS Packages"

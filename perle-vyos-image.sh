@@ -147,15 +147,15 @@ if [ ! -d $VYOS_BUILD_DIR ]; then
             patch -p1 < ${VYOS_BUILD_PATCH}/${patch}
         done
     fi
+    cp -rvf ${CWD}/packages/*.deb ${CWD}/${VYOS_BUILD_DIR}/packages
     Elapse_Time "$VYOS_BUILD_DIR set-up time" $TIME_START
 fi
 
 if true; then
-    cp -rvf ${CWD}/packages/*.deb ${CWD}/${VYOS_BUILD_DIR}/packages
     cd ${CWD}/${VYOS_BUILD_DIR}
     echo ""
     echo "I: Builing VyOS Packages"
-    recursive_copy_file_folder ${PATCH_DIR}/linux-kernel/arch ${CWD}/${VYOS_BUILD_DIR}/${VYOS_PKG_DIR}/linux-kernel/arch
+    recursive_copy_file_folder ${PATCH_DIR}/linux-kernel ${CWD}/${VYOS_BUILD_DIR}/${VYOS_PKG_DIR}/linux-kernel
     for package in "${packages[@]}"
     do
         echo ""

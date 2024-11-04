@@ -19,6 +19,18 @@ There are several directories with their own purpose:
         ti_bdebstrap/ Customized patch files to build "ti_bdedstrap" for Perle Systems
         vyos-build/   Customized Patch files to build "VyOS" for Perle Systems
 
+# Clone the repo
+To clone the repo
+```
+git clone https://github.com/jkim71/perle-vyos.git
+```
+Also, it needs to update sub-module with below command
+```
+cd perle-vyos
+git submodule init
+git submodule update
+```
+
 # Building
 
 This is designed to build in a Dockr container.

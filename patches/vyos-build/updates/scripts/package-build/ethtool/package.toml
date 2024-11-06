@@ -1,0 +1,5 @@
+[[packages]]
+name = "ethtool"
+commit_id = "debian/1%6.10-1"
+scm_url = "https://salsa.debian.org/kernel-team/ethtool"
+build_cmd = "DEB_BUILD_OPTIONS=nocheck dpkg-buildpackage -uc -us -b"

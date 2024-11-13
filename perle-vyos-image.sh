@@ -52,6 +52,7 @@ packages=(
 #    "wide-dhcpv6"
 #    "xen-guest-agent"
     "linux-kernel"
+    "mwifiex"
 )
 
 #if [ "$EUID" -ne 0 ] ; then

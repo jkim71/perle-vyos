@@ -1,0 +1,33 @@
+diff --git a/drivers/net/usb/qmi_wwan.c b/drivers/net/usb/qmi_wwan.c
+index 92c1500fa7c4..9b8d6c0ef2de 100644
+--- a/drivers/net/usb/qmi_wwan.c
++++ b/drivers/net/usb/qmi_wwan.c
+@@ -947,6 +947,15 @@ static const struct driver_info	qmi_wwan_info_quirk_dtr = {
+ 	.data           = QMI_WWAN_QUIRK_DTR,
+ };
+ 
++static const struct driver_info	simcom_wwan_usbnet_driver_info = {
++	.description	= "SIMCOM wwan/QMI device",
++	.flags		= FLAG_WWAN | FLAG_SEND_ZLP,
++	.bind		= qmi_wwan_bind,
++	.unbind		= qmi_wwan_unbind,
++	.rx_fixup       = qmi_wwan_rx_fixup,
++	.data           = QMI_WWAN_QUIRK_DTR,
++};
++
+ #define HUAWEI_VENDOR_ID	0x12D1
+ 
+ /* map QMI/wwan function by a fixed interface number */
+@@ -1425,7 +1434,11 @@ static const struct usb_device_id products[] = {
+ 	{QMI_FIXED_INTF(0x03f0, 0x9d1d, 1)},	/* HP lt4120 Snapdragon X5 LTE */
+ 	{QMI_QUIRK_SET_DTR(0x22de, 0x9051, 2)}, /* Hucom Wireless HM-211S/K */
+ 	{QMI_FIXED_INTF(0x22de, 0x9061, 3)},	/* WeTelecom WPD-600N */
+-	{QMI_QUIRK_SET_DTR(0x1e0e, 0x9001, 5)},	/* SIMCom 7100E, 7230E, 7600E ++ */
++	/* {QMI_QUIRK_SET_DTR(0x1e0e, 0x9001, 5)}, */	/* SIMCom 7100E, 7230E, 7600E ++ */
++	{	/* SIMCom 7100E, 7230E, 7600E ++ */
++		USB_DEVICE_INTERFACE_NUMBER(0x1e0e, 0x9001, 5),
++		.driver_info = (unsigned long)&simcom_wwan_usbnet_driver_info,
++	},
+ 	{QMI_QUIRK_SET_DTR(0x2c7c, 0x0121, 4)},	/* Quectel EC21 Mini PCIe */
+ 	{QMI_QUIRK_SET_DTR(0x2c7c, 0x0191, 4)},	/* Quectel EG91 */
+ 	{QMI_QUIRK_SET_DTR(0x2c7c, 0x0195, 4)},	/* Quectel EG95 */

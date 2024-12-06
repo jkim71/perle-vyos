@@ -12,10 +12,10 @@ index a1b1190..1a73674 100755
  build=${1}
  PARSEPATH=./build/${build}
 diff --git a/scripts/build_bsp.sh b/scripts/build_bsp.sh
-index 1d420a3..38adfae 100755
+index cd5dbbf..2b7b2b9 100755
 --- a/scripts/build_bsp.sh
 +++ b/scripts/build_bsp.sh
-@@ -89,10 +89,10 @@ bsp_version=$3
+@@ -89,12 +89,12 @@ bsp_version=$3
      FW_DIR=${topdir}/build/${build}/bsp_sources/ti-linux-firmware
  
      log "> BSP sources: cloned"
@@ -27,15 +27,41 @@ index 1d420a3..38adfae 100755
 +    #tar --use-compress-program="pigz --best --recursive | pv" -cf bsp_sources.tar.xz bsp_sources &>>"${LOG_FILE}"
 +    #log "> BSP sources: backup created .."
  
-     mkdir -p tisdk-debian-${distro}-boot
+-    mkdir -p tisdk-debian-${distro}-${bsp_version}-boot
++    mkdir -p tisdk-debian-${distro}-boot
+ }
+ 
+ function build_atf() {
+@@ -137,18 +137,18 @@ bsp_version=$2
+     log "> uboot-r5: building .."
+     make -j`nproc` ARCH=arm CROSS_COMPILE=arm-none-linux-gnueabihf- ${uboot_r5_defconfig} O=${UBOOT_DIR}/out/r5 &>>"${LOG_FILE}"
+     make -j`nproc` ARCH=arm CROSS_COMPILE=arm-none-linux-gnueabihf- O=${UBOOT_DIR}/out/r5 BINMAN_INDIRS=${FW_DIR} &>>"${LOG_FILE}"
+-    cp ${UBOOT_DIR}/out/r5/tiboot3*.bin ${topdir}/build/${build}/tisdk-debian-${distro}-${bsp_version}-boot/ &>> ${LOG_FILE}
++    cp ${UBOOT_DIR}/out/r5/tiboot3*.bin ${topdir}/build/${build}/tisdk-debian-${distro}-boot/ &>> ${LOG_FILE}
+ 
+     cd ${UBOOT_DIR}
+     log "> uboot-a53: building .."
+     make -j`nproc` ARCH=arm CROSS_COMPILE=${cross_compile} ${uboot_a53_defconfig} O=${UBOOT_DIR}/out/a53 &>>"${LOG_FILE}"
+     make -j`nproc` ARCH=arm CROSS_COMPILE=${cross_compile} BL31=${TFA_DIR}/build/k3/lite/release/bl31.bin TEE=${OPTEE_DIR}/out/arm-plat-k3/core/tee-pager_v2.bin O=${UBOOT_DIR}/out/a53 BINMAN_INDIRS=${topdir}/build/${build}/bsp_sources/ti-linux-firmware &>>"${LOG_FILE}"
+-    cp ${UBOOT_DIR}/out/a53/tispl.bin ${topdir}/build/${build}/tisdk-debian-${distro}-${bsp_version}-boot/ &>> ${LOG_FILE}
+-    cp ${UBOOT_DIR}/out/a53/u-boot.img ${topdir}/build/${build}/tisdk-debian-${distro}-${bsp_version}-boot/ &>> ${LOG_FILE}
++    cp ${UBOOT_DIR}/out/a53/tispl.bin ${topdir}/build/${build}/tisdk-debian-${distro}-boot/ &>> ${LOG_FILE}
++    cp ${UBOOT_DIR}/out/a53/u-boot.img ${topdir}/build/${build}/tisdk-debian-${distro}-boot/ &>> ${LOG_FILE}
+ 
+ 	case ${machine} in
+ 		am62pxx-evm | am62xx-evm | am62xx-lp-evm | am62xxsip-evm)
+-			cp ${UBOOT_DIR}/tools/logos/ti_logo_414x97_32bpp.bmp.gz ${topdir}/build/${build}/tisdk-debian-${distro}-${bsp_version}-boot/ &>> ${LOG_FILE}
++			cp ${UBOOT_DIR}/tools/logos/ti_logo_414x97_32bpp.bmp.gz ${topdir}/build/${build}/tisdk-debian-${distro}-boot/ &>> ${LOG_FILE}
+ 			;;
+ 	esac
  }
 diff --git a/scripts/build_distro.sh b/scripts/build_distro.sh
-index 6e2a4ae..3ef35e8 100755
+index d18c78d..2332515 100755
 --- a/scripts/build_distro.sh
 +++ b/scripts/build_distro.sh
-@@ -7,20 +7,30 @@ distro=$1
- distro_codename=$2
+@@ -8,18 +8,29 @@ distro_codename=$2
  machine=$3
+ bsp_version=$4
  
 -    cd ${topdir}
 -
@@ -43,14 +69,12 @@ index 6e2a4ae..3ef35e8 100755
 -    bdebstrap \
 -        -c ${topdir}/configs/bdebstrap_configs/${distro_codename}/${distro}.yaml \
 -        --name ${topdir}/build/${distro} \
--        --target tisdk-debian-${distro}-rootfs \
+-        --target tisdk-debian-${distro}-${bsp_version}-rootfs \
 -        --hostname ${machine} \
 -        -f \
 -        &>>"${LOG_FILE}"
 -
 -    cd ${topdir}/build/
--
--    ROOTFS_DIR=${topdir}/build/${distro}/tisdk-debian-${distro}}-rootfs
 +    if true; then
 +        fs_dir=$(dirname ${topdir})/build/fs
 +
@@ -67,20 +91,28 @@ index 6e2a4ae..3ef35e8 100755
 +        bdebstrap \
 +            -c ${topdir}/configs/bdebstrap_configs/${distro_codename}/${distro}.yaml \
 +            --name ${topdir}/build/${distro} \
-+            --target tisdk-debian-${distro}-rootfs \
++            --target tisdk-debian-${distro}-${bsp_version}-rootfs \
 +            --hostname ${machine} \
 +            -f \
 +            &>>"${LOG_FILE}"
 +
 +        cd ${topdir}/build/
 +    fi
-+    ROOTFS_DIR=${topdir}/build/${distro}/tisdk-debian-${distro}-rootfs
- }
  
- function package_and_clean() {
-@@ -35,11 +45,11 @@ build=$1
-     tar --use-compress-program="pigz --best --recursive | pv" -cf tisdk-debian-${distro}-boot.tar.xz tisdk-debian-${distro}-boot &>>"${LOG_FILE}"
-     rm -rf tisdk-debian-${distro}-boot
+     ROOTFS_DIR=${topdir}/build/${distro}/tisdk-debian-${distro}}-rootfs
+ }
+@@ -31,17 +42,17 @@ bsp_version=$2
+     cd ${topdir}/build/${build}
+ 
+     log "> Cleaning up ${build}"
+-    tar --use-compress-program="pigz --best --recursive | pv" -cf tisdk-debian-${distro}-${bsp_version}-rootfs.tar.xz tisdk-debian-${distro}-${bsp_version}-rootfs &>>"${LOG_FILE}"
++    tar --use-compress-program="pigz --best --recursive | pv" -cf tisdk-debian-${distro}-rootfs.tar.xz tisdk-debian-${distro}-rootfs &>>"${LOG_FILE}"
+     rm -rf tisdk-debian-${distro}-rootfs
+ 
+-    tar --use-compress-program="pigz --best --recursive | pv" -cf tisdk-debian-${distro}-${bsp_version}-boot.tar.xz tisdk-debian-${distro}-${bsp_version}-boot &>>"${LOG_FILE}"
+-    rm -rf tisdk-debian-${distro}-${bsp_version}-boot
++    tar --use-compress-program="pigz --best --recursive | pv" -cf tisdk-debian-${distro}-boot.tar.xz tisdk-debian-${distro}-boot &>>"${LOG_FILE}"
++    rm -rf tisdk-debian-${distro}-boot
  
 -    rm -rf bsp_sources
 +    # rm -rf bsp_sources
@@ -89,8 +121,8 @@ index 6e2a4ae..3ef35e8 100755
 +    #cd ${topdir}/build/
  
 -    log "> Packaging ${build}"
--    tar --use-compress-program="pigz --best --recursive | pv" -cf ${build}.tar.xz ${build} &>>"${LOG_FILE}"
+-    tar --use-compress-program="pigz --best --recursive | pv" -cf ${distro}-${bsp_version}.tar.xz ${build} &>>"${LOG_FILE}"
 +    #log "> Packaging ${build}"
-+    #tar --use-compress-program="pigz --best --recursive | pv" -cf ${build}.tar.xz ${build} &>>"${LOG_FILE}"
++    #tar --use-compress-program="pigz --best --recursive | pv" -cf ${distro}-${bsp_version}.tar.xz ${build} &>>"${LOG_FILE}"
  }
  

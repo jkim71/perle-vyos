@@ -22,35 +22,35 @@ PATCH_DIR=${CWD}/patches
 set -e
 
 packages=(
-#    "vyos"
-#    "aws-gwlbtun"
-#    "ddclient"
+    "vyos"
+    "aws-gwlbtun"
+    "ddclient"
 #    "dropbear"
-#    "ethtool"
-#    "frr"
-#    "frr_exporter"
+    "ethtool"
+    "frr"
+    "frr_exporter"
 #    "hostap"
 #    "hsflowd"
-#    "isc-dhcp"
+    "isc-dhcp"
 #    "kea"
 #    "keepalived"
 #    "ndppd"
 #    "netfilter"
 #    "net-snmp"
-#    "node_exporter"
-#    "opennhrp"
-#    "openvpn-otp"
-#    "owamp"
+    "node_exporter"
+    "opennhrp"
+    "openvpn-otp"
+    "owamp"
 #    "pam_tacplus"
 #    "pmacct"
-#    "podman"
+    "podman"
 #    "pyhumps"
 #    "radvd"
-#    "strongswan"
-#    "telegraf"
+    "strongswan"
+    "telegraf"
 #    "waagent"
 #    "wide-dhcpv6"
-#    "xen-guest-agent"
+    "xen-guest-agent"
     "linux-kernel"
     "mwifiex"
 )
@@ -148,7 +148,7 @@ if [ ! -d $VYOS_BUILD_DIR ]; then
             patch -p1 < ${VYOS_BUILD_PATCH}/${patch}
         done
     fi
-    cp -rvf ${CWD}/packages/*.deb ${CWD}/${VYOS_BUILD_DIR}/packages
+    cp -rvf ${CWD}/packages/*.deb ${CWD}/${VYOS_BUILD_DIR}/packages | true
     Elapse_Time "$VYOS_BUILD_DIR set-up time" $TIME_START
 fi
 

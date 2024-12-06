@@ -24,12 +24,6 @@ To clone the repo
 ```
 git clone https://github.com/jkim71/perle-vyos.git
 ```
-Also, it needs to update sub-module with below command
-```
-cd perle-vyos
-git submodule init
-git submodule update
-```
 
 # Building
 

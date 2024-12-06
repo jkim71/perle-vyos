@@ -1,3 +1,0 @@
-[submodule "packages"]
-	path = packages
-	url = https://github.com/jkim71/vyos_package.git

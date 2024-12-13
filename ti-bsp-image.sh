@@ -50,9 +50,15 @@ function Elapse_Time() {
     TIME_START=$END_TIME
 }
 
+host_arch=`uname -m`
 log_notice "+==================================================+"
-log_notice "THIS SCRIPT SHOULD BE RUN$C_RED OUTSIDE$C_CYAN A DOCKER CONTAINER"
+if [ "$host_arch" == "aarch64" ]; then
+    log_notice "THIS SCRIPT SHOULD BE RUN$C_RED INSIDE$C_CYAN A DOCKER CONTAINER"
+else
+    log_notice "THIS SCRIPT SHOULD BE RUN$C_RED OUTSIDE$C_CYAN A DOCKER CONTAINER"
+fi
 log_notice "+==================================================+"
+
 
 if $READ_SUDO_PIN; then
     RETRY=3

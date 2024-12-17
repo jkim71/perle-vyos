@@ -1,3 +1,4 @@
 /vyos-build
 *.ko
 *.bin
+*DS_Store

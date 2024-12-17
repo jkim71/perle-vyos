@@ -103,6 +103,7 @@ RUN apt-get update && apt-get install -y \
       python3-flake8 \
       python3-autopep8 \
       python3-tomli \
+      python3-tomli-w \
       yq \
       debootstrap \
       live-build \
@@ -136,7 +137,7 @@ RUN dpkg-reconfigure ca-certificates; \
 # Installing OCAML needed to compile libvyosconfig
 RUN curl https://raw.githubusercontent.com/ocaml/opam/master/shell/install.sh \
       --output /tmp/opam_install.sh --retry 10 --retry-delay 5 && \
-    sed -i 's/read BINDIR/BINDIR=""/' /tmp/opam_install.sh && sh /tmp/opam_install.sh && \
+    sed -i 's/read -r BINDIR/BINDIR=""/' /tmp/opam_install.sh && sh /tmp/opam_install.sh && \
     opam init --root=/opt/opam --comp=${OCAML_VERSION} --disable-sandboxing --no-setup
 
 RUN eval $(opam env --root=/opt/opam --set-root) && \
@@ -240,7 +241,7 @@ RUN gem install --no-document fpm
 # Packages needed for vyos-1x
 RUN pip install --break-system-packages \
       git+https://github.com/aristanetworks/j2lint.git@341b5d5db86 \
-      pyhumps==3.8.0; \
+      pyhumps==3.8.0 && \
     apt-get update && apt-get install -y \
       dh-python \
       fakeroot \
@@ -371,54 +372,107 @@ RUN apt-get update && apt-get install -y \
 RUN apt-get update && apt-get install -y \
       libnl-genl-3-dev \
       libxtables-dev
-
-# Packages needed for ???
-RUN apt-get update && apt-get install -y \
-      kpartx
-
-# Packages needed for owamp
+# Packages needed for OWAMP - JF
 RUN apt-get update && apt-get install -y \
       dh-apparmor \
       dh-exec \
       libcap-dev
 
-# Packages needed for net-snmp
+# Packages needed for Strongswan - JF
 RUN apt-get update && apt-get install -y \
-      libperl-dev \
-      default-libmysqlclient-dev
+	bison \
+	bzip2 \
+	debhelper-compat \
+	dh-apparmor \
+	dpkg-dev  \
+	flex \
+	gperf \
+	libiptc-dev \
+	libcap-dev \
+	libcurl3-dev \
+	libgcrypt20-dev \
+	libgmp3-dev \
+	libkrb5-dev \
+	libldap2-dev \
+	libnm-dev \
+	libpam0g-dev \
+	libsqlite3-dev \
+	libssl-dev \
+	libtool \
+	libtss2-dev \
+	libxml2-dev \
+	pkg-config \
+	po-debconf \
+	systemd \
+	tzdata \
+	libcurl4-openssl-dev \
+	libgmp3-dev \
+	libldap2-dev \
+	libpam0g-dev \
+	libsqlite3-dev \
+	libsystemd-dev \
+	systemd
 
-# Packages needed for chrony
+# Packages needed for failed make of Vyos - JF
 RUN apt-get update && apt-get install -y \
-      asciidoctor \
-      gnutls-bin \
-      libedit-dev \
-      libgnutls28-dev \
-      libseccomp-dev \
-      nettle-dev pps-tools
-
-# Packages needed for ipaddrcheck
+	kpartx
+	
+# Packages needed for frr - JF
+# DK	libsnmp-dev removed, it  will be installed when net-snmp is installed BEFORE frr is built - order dependency
+# And for building libyan2-dev https://docs.frrouting.org/projects/dev-guide/en/latest/building-frr-for-debian12.html#install-required-packages -JF
 RUN apt-get update && apt-get install -y \
-      libcidr-dev \
-      check
+	chrpath \
+	gawk \
+	install-info \
+	libcap-dev \
+	libjson-c-dev \
+	librtr-dev \
+	libpam-dev \
+	libprotobuf-c-dev \
+	libpython3-dev:native \
+	python3-sphinx:native \
+	protobuf-c-compiler \
+	python3-dev:native \
+	texinfo \
+	lua5.3 \
+	autoconf \
+	automake \
+	make \
+	libreadline-dev \
+	gdb \
+	libgrpc-dev \
+	libpcre2-dev \
+	libgrpc++-dev \
+	libsqlite3-dev \
+	libzmq5 \
+	libzmq3-dev
 
-# Packages needed for hvinfo
+# Packages needed for net-snmp - DK
 RUN apt-get update && apt-get install -y \
-      gnat \
-      gprbuild
+	perl-xs-dev \
+	default-libmysqlclient-dev
 
-# Packages needed for vyatta-biosdevname
+# Packages needed for keepalived
+RUN apt-get install -y \
+    libipset-dev libnfnetlink-dev libnftnl-dev libnl-nf-3-dev libpopt-dev
+
+#Packages needed for TI Boot Environment
 RUN apt-get update && apt-get install -y \
-      libpci-dev
+	pigz \
+	expect \
+	pv \
+	binfmtc \
+	binfmt-support \
+	debian-archive-keyring \
+	bdebstrap \
+	wget \
+	swig \
+	python3-pyelftools \
+	python3-cryptography
 
-# Packages needed for vyatta-cfg
-RUN apt-get update && apt-get install -y \
-      libglib2.0-dev \
-      libboost-filesystem-dev
-
-# Packages needed for vyos-http-api-tools
-RUN apt-get update && apt-get install -y \
-      dh-virtualenv
-
+RUN pip install --break-system-packages \
+	toml-cli \
+	yamllint
 
 # Packages needed for nftables
 RUN apt-get update && apt-get install -y \

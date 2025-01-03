@@ -1,0 +1,12 @@
+[[packages]]
+name = "libgpiod"
+# commit_id = "v2.2.x"
+commit_id = "master"
+scm_url = "https://github.com/brgl/libgpiod.git"
+build_cmd = "../build-libgpiod.sh"
+
+[dependencies]
+packages = [
+    "autoconf",
+    "autoconf-archive"
+]

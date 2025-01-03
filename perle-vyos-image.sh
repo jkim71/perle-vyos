@@ -22,7 +22,6 @@ PATCH_DIR=${CWD}/patches
 set -e
 
 packages=(
-    "vyos"
     "aws-gwlbtun"
     "ddclient"
 #    "dropbear"
@@ -48,11 +47,14 @@ packages=(
 #    "radvd"
     "strongswan"
     "telegraf"
+    "vyos"
 #    "waagent"
 #    "wide-dhcpv6"
     "xen-guest-agent"
     "linux-kernel"
+    "debian-ti"
     "mwifiex"
+    "libgpiod"
 )
 
 #if [ "$EUID" -ne 0 ] ; then

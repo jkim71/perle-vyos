@@ -1,0 +1,200 @@
+diff --git a/arch/arm64/boot/dts/ti/k3-am64-main.dtsi b/arch/arm64/boot/dts/ti/k3-am64-main.dtsi
+index d116d485c099..9cf563e5738d 100644
+--- a/arch/arm64/boot/dts/ti/k3-am64-main.dtsi
++++ b/arch/arm64/boot/dts/ti/k3-am64-main.dtsi
+@@ -378,7 +378,7 @@ main_uart0: serial@2800000 {
+ 		power-domains = <&k3_pds 146 TI_SCI_PD_EXCLUSIVE>;
+ 		clocks = <&k3_clks 146 0>;
+ 		clock-names = "fclk";
+-		status = "okay";
++		status = "disabled";
+ 	};
+ 
+ 	main_uart1: serial@2810000 {
+@@ -389,7 +389,7 @@ main_uart1: serial@2810000 {
+ 		power-domains = <&k3_pds 152 TI_SCI_PD_EXCLUSIVE>;
+ 		clocks = <&k3_clks 152 0>;
+ 		clock-names = "fclk";
+-		status = "okay";
++		status = "disabled";
+ 	};
+ 
+ 	main_uart2: serial@2820000 {
+@@ -411,7 +411,7 @@ main_uart3: serial@2830000 {
+ 		power-domains = <&k3_pds 154 TI_SCI_PD_EXCLUSIVE>;
+ 		clocks = <&k3_clks 154 0>;
+ 		clock-names = "fclk";
+-		status = "okay";
++		status = "disabled";
+ 	};
+ 
+ 	main_uart4: serial@2840000 {
+@@ -591,7 +591,7 @@ main_gpio1: gpio@601000 {
+ 			     <183>, <184>, <185>;
+ 		interrupt-controller;
+ 		#interrupt-cells = <2>;
+-		ti,ngpio = <80>;
++		ti,ngpio = <88>;
+ 		ti,davinci-gpio-unbanked = <0>;
+ 		power-domains = <&k3_pds 78 TI_SCI_PD_EXCLUSIVE>;
+ 		clocks = <&k3_clks 78 0>;
+diff --git a/arch/arm64/boot/dts/ti/k3-am642-evm.dts b/arch/arm64/boot/dts/ti/k3-am642-evm.dts
+index 51db0583acae..91d726ef7594 100644
+--- a/arch/arm64/boot/dts/ti/k3-am642-evm.dts
++++ b/arch/arm64/boot/dts/ti/k3-am642-evm.dts
+@@ -18,7 +18,7 @@ / {
+ 	model = "Texas Instruments AM642 EVM";
+ 
+ 	chosen {
+-		stdout-path = &main_uart1;
++		stdout-path = &main_uart0;
+ 	};
+ 
+ 	aliases {
+@@ -248,17 +248,13 @@ AM64X_IOPAD(0x0290, PIN_INPUT, 0) /* MMC1_CLKLB */
+ 
+ 	main_uart1_pins_default: main-uart1-default-pins {
+ 		pinctrl-single,pins = <
++			AM64X_IOPAD(0x0248, PIN_INPUT, 0)		/* (D16) UART1_CTSn */
++			AM64X_IOPAD(0x024c, PIN_OUTPUT, 0)		/* (E16) UART1_RTSn */
+ 			AM64X_IOPAD(0x0240, PIN_INPUT, 0)		/* (E15) UART1_RXD */
+ 			AM64X_IOPAD(0x0244, PIN_OUTPUT, 0)		/* (E14) UART1_TXD */
+ 		>;
+ 	};
+ 
+-	main_uart3_pins_default: main-uart3-default-pins {
+-		pinctrl-single,pins = <
+-			AM64X_IOPAD(0x0248, PIN_INPUT, 4)		/* (D16) UART3_RXD */
+-			AM64X_IOPAD(0x024c, PIN_OUTPUT, 4)		/* (E16) UART3_TXD */
+-		>;
+-	};
+ 	main_uart0_pins_default: main-uart0-default-pins {
+ 		bootph-all;
+ 		pinctrl-single,pins = <
+@@ -266,14 +262,6 @@ AM64X_IOPAD(0x0238, PIN_INPUT, 0) /* (B16) UART0_CTSn */
+ 			AM64X_IOPAD(0x023c, PIN_OUTPUT, 0) /* (A16) UART0_RTSn */
+ 			AM64X_IOPAD(0x0230, PIN_INPUT, 0) /* (D15) UART0_RXD */
+ 			AM64X_IOPAD(0x0234, PIN_OUTPUT, 0) /* (C16) UART0_TXD */
+-			/* AM64X_IOPAD(0x01B4, PIN_INPUT, 7) */ /* (W2) GPIO1_21 => UART0_DTRn */
+-			/* AM64X_IOPAD(0x01B0, PIN_INPUT, 7) */ /* (Y2) GPIO1_20 => UART0_DCDn */
+-			/* AM64X_IOPAD(0x0170, PIN_OUTPUT, 7) */ /* (AA2) GPIO1_4 => UART0_RIn */
+-			/* AM64X_IOPAD(0x0190, PIN_INPUT, 7) */ /* (AA3) GPIO1_12 => UART0_DSRn */
+-			/* AM64X_IOPAD(0x0254, PIN_INPUT, 9) */ /* (B17) UART0_RIn */
+-			/* AM64X_IOPAD(0x0250, PIN_OUTPUT, 9) */ /* (A17) UART0_DTRn */
+-			/* AM64X_IOPAD(0x025c, PIN_INPUT, 9) */ /* (D17) UART0_DSRn */
+-			/* AM64X_IOPAD(0x0258, PIN_INPUT, 9) */ /*/ /* (C17) UART0_DCDn */
+ 		>;
+ 	};
+ 
+@@ -302,22 +290,6 @@ AM64X_IOPAD(0x026c, PIN_INPUT_PULLUP, 0) /* (B19) I2C1_SDA */
+ 		>;
+ 	};
+ 
+-	/* Digital IOs */
+-	main_gpio0_digital_pins: main-gpio0-digital-pins {
+-		pinctrl-single,pins = <
+-		>;
+-	};
+-
+-	/* Digital IOs */
+-	main_gpio1_digital_pins: main-gpio1-digital-pins {
+-		pinctrl-single,pins = <
+-			AM64X_IOPAD(0x01B4, PIN_INPUT, 7) /* (W2) GPIO1_21 => UART0_DTRn */
+-			AM64X_IOPAD(0x01B0, PIN_INPUT, 7) /* (Y2) GPIO1_20 => UART0_DCDn */
+-			AM64X_IOPAD(0x0170, PIN_OUTPUT, 7) /* (AA2) GPIO1_4 => UART0_RIn */
+-			AM64X_IOPAD(0x0190, PIN_INPUT, 7) /* (AA3) GPIO1_12 => UART0_DSRn */
+-		>;
+-	};
+-
+ 	mdio1_pins_default: mdio1-default-pins {
+ 		bootph-all;
+ 		pinctrl-single,pins = <
+@@ -418,28 +390,14 @@ &main_uart0 {
+ 	status = "okay";
+ 	pinctrl-names = "default";
+ 	pinctrl-0 = <&main_uart0_pins_default>;
+-	dcd-gpios = <&main_gpio1 20 GPIO_ACTIVE_LOW>;
+-	dsr-gpios = <&main_gpio1 12 GPIO_ACTIVE_LOW>;
+-	dtr-gpios = <&main_gpio1 21 GPIO_ACTIVE_LOW>;
+-	rng-gpios = <&main_gpio1 4 GPIO_ACTIVE_LOW>;
+ 	current-speed = <115200>;
+ };
+ 
+ /* main_uart1 is reserved for firmware usage */
+ &main_uart1 {
+-	bootph-all;
+-	status = "okay";
++	status = "reserved";
+ 	pinctrl-names = "default";
+ 	pinctrl-0 = <&main_uart1_pins_default>;
+-	current-speed = <115200>;
+-};
+-
+-&main_uart3 {
+-	bootph-all;
+-	status = "okay";
+-	pinctrl-names = "default";
+-	pinctrl-0 = <&main_uart3_pins_default>;
+-	current-speed = <115200>;
+ };
+ 
+ &main_i2c0 {
+@@ -499,58 +457,6 @@ display@3c {
+ 
+ &main_gpio0 {
+ 	bootph-all;
+-	pinctrl-names = "default";
+-	pinctrl-0 = <&main_gpio0_digital_pins>;
+-	gpio-line-names =
+-		"", "", "", "", /* 0-3 */
+-		"", "", "", "", /* 4-7 */
+-		"", "", "", "", /* 8-11 */
+-		"VTT_EN", "OSPI_RSTn", "", "", /* 12-15 */
+-		"", "", "", "", /* 16-19 */
+-		"", "", "", "", /* 20-23 */
+-		"", "", "", "", /* 24-27 */
+-		"", "", "", "", /* 28-31 */
+-		"", "", "", "", /* 32-35 */
+-		"", "", "", "", /* 36-39 */
+-		"", "", "", "", /* 40-43 */
+-		"", "", "", "", /* 44-47 */
+-		"", "", "", "", /* 48-51 */
+-		"", "", "", "", /* 52-55 */
+-		"", "", "", "", /* 56-59 */
+-		"", "", "", "", /* 60-63 */
+-		"", "", "", "", /* 64-67 */
+-		"", "", "", "", /* 68-71 */
+-		"", "", "", "", /* 72-75 */
+-		"", "", "", "", /* 76-79 */
+-		"", "", "", "", /* 80-83 */
+-		"", "", "";     /* 84-86 */
+-};
+-
+-&main_gpio1 {
+-	bootph-all;
+-	pinctrl-names = "default";
+-	pinctrl-0 = <&main_gpio1_digital_pins>;
+-	gpio-line-names =
+-		"", "", "", "", /* 0-3 */
+-		"UART0_RIn", "", "", "", /* 4-7 */
+-		"", "", "", "", /* 8-11 */
+-		"UART0_DSRn", "", "", "", /* 12-15 */
+-		"", "", "", "", /* 16-19 */
+-		"UART0_DCDn", "UART0_DTRn", "", "", /* 20-23 */
+-		"", "", "", "", /* 24-27 */
+-		"", "", "", "", /* 28-31 */
+-		"", "", "", "", /* 32-35 */
+-		"", "", "", "", /* 36-39 */
+-		"", "", "", "GPIO1_43_INTn", /* 40-43 */
+-		"", "", "", "", /* 44-47 */
+-		"", "", "", "", /* 48-51 */
+-		"", "", "", "", /* 52-55 */
+-		"", "", "", "", /* 56-59 */
+-		"", "", "", "", /* 60-63 */
+-		"", "", "", "", /* 64-67 */
+-		"", "", "RGMII_INT", "", /* 68-71 */
+-		"", "", "", "", /* 72-75 */
+-		"", "", "IO_EXP_INTn", ""; /* 76-79 */
+ };
+ 
+ /* mcu_gpio0 is reserved for mcu firmware usage */

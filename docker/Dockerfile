@@ -478,11 +478,6 @@ RUN pip install --break-system-packages \
 RUN apt-get update && apt-get install -y \
       asciidoc-base
 
-# Packages needed for libgpiod
-RUN apt-get update && apt-get install -y \
-      autoconf \
-      autoconf-archive
-
 # Allow password-less 'sudo' for all users in group 'sudo'
 RUN sed "s/^%sudo.*/%sudo\tALL=(ALL) NOPASSWD:ALL/g" -i /etc/sudoers && \
     echo "vyos_bld\tALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers && \

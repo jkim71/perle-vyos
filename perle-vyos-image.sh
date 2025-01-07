@@ -179,3 +179,12 @@ if true; then
     fi
     Elapse_Time "VyOS Image build time" $TIME_START
 fi
+
+if true; then
+    if [ "$host_arch" == "aarch64" ]; then
+        cd ${CWD}
+        echo ""
+        echo "I: Build TI boot loader and file systems"
+        ./ti-bsp-image.sh
+    fi
+fi

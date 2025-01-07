@@ -1,0 +1,605 @@
+diff --git a/drivers/tty/serial/8250/8250.h b/drivers/tty/serial/8250/8250.h
+index 1aa3e55c8b47..6f6e681b093f 100644
+--- a/drivers/tty/serial/8250/8250.h
++++ b/drivers/tty/serial/8250/8250.h
+@@ -19,7 +19,10 @@ struct uart_8250_dma {
+ 	int (*rx_dma)(struct uart_8250_port *p);
+ 	void (*prepare_tx_dma)(struct uart_8250_port *p);
+ 	void (*prepare_rx_dma)(struct uart_8250_port *p);
+-
++// Perle start for trueport
++	unsigned int (*handle_rx_dma)(struct uart_8250_port *p, u8 iir,
++				      unsigned char status);
++// Perle end for trueport
+ 	/* Filter function */
+ 	dma_filter_fn		fn;
+ 	/* Parameter to the filter function */
+@@ -268,14 +271,21 @@ static inline int serial8250_MSR_to_TIOCM(int msr)
+ 
+ 	return tiocm;
+ }
+-
++// Perle start for trueport
++void serial_out_mcr(struct uart_8250_port *up, int value);
+ static inline void serial8250_out_MCR(struct uart_8250_port *up, int value)
+ {
+-	serial_out(up, UART_MCR, value);
+-
+-	if (up->gpios)
+-		mctrl_gpio_set(up->gpios, serial8250_MCR_to_TIOCM(value));
++	serial_out_mcr(up, value);
+ }
++void serial_out_mctrl(struct uart_8250_port *up, int mctrl, int mcr_write_mask);
++// static inline void serial8250_out_MCR(struct uart_8250_port *up, int value)
++// {
++// 	serial_out(up, UART_MCR, value);
++
++// 	if (up->gpios)
++// 		mctrl_gpio_set(up->gpios, serial8250_MCR_to_TIOCM(value));
++// }
++// Perle end for trueport
+ 
+ static inline int serial8250_in_MCR(struct uart_8250_port *up)
+ {
+diff --git a/drivers/tty/serial/8250/8250_core.c b/drivers/tty/serial/8250/8250_core.c
+index 3449f8790e46..ebbf2d216fb9 100644
+--- a/drivers/tty/serial/8250/8250_core.c
++++ b/drivers/tty/serial/8250/8250_core.c
+@@ -559,7 +559,9 @@ static void __init serial8250_isa_init_ports(void)
+ 		port->membase  = old_serial_port[i].iomem_base;
+ 		port->iotype   = old_serial_port[i].io_type;
+ 		port->regshift = old_serial_port[i].iomem_reg_shift;
+-
++// Perle start for trueport
++serial8250_set_defaults(up);	/* PERLE */
++// Perle end for trueport
+ 		port->irqflags |= irqflag;
+ 		if (serial8250_isa_config != NULL)
+ 			serial8250_isa_config(i, &up->port, &up->capabilities);
+@@ -1066,6 +1068,14 @@ int serial8250_register_8250_port(const struct uart_8250_port *up)
+ 		uart->rs485_stop_tx	= up->rs485_stop_tx;
+ 		uart->lsr_save_mask	= up->lsr_save_mask;
+ 		uart->dma		= up->dma;
++// Perle start for trueport
++		uart->uart_port_index	= up->uart_port_index;
++		uart->set_media_type	= up->set_media_type;
++		uart->mcr_mask			= up->mcr_mask;
++		uart->port.get_mstatus	= up->port.get_mstatus;
++		uart->port.set_termios	= up->port.set_termios;		// duplicate below
++		uart->port.set_mctrl	= up->port.set_mctrl;		// duplicate below
++// Perle end for trueport
+ 
+ 		/* Take tx_loadsz from fifosize if it wasn't set separately */
+ 		if (uart->port.fifosize && !uart->tx_loadsz)
+@@ -1129,6 +1139,19 @@ int serial8250_register_8250_port(const struct uart_8250_port *up)
+ 			uart->dl_read = up->dl_read;
+ 		if (up->dl_write)
+ 			uart->dl_write = up->dl_write;
++// Perle start for trueport
++        {
++            uart->char_buf_ptr = &uart->char_buf[0];
++            uart->flag_buf_ptr = &uart->flag_buf[0];
++            timer_setup(&uart->forward_idle_timer            , serial8250_forward_idle_timer            , 0);
++            timer_setup(&uart->forward_force_timer           , serial8250_forward_force_timer           , 0);
++            timer_setup(&uart->forward_send_timer            , serial8250_forward_send_timer            , 0);
++            timer_setup(&uart->sigscan_delay_timer           , serial8250_sigscan_delay_timer           , 0);
++            timer_setup(&uart->rs232_rts_toggle_timer        , serial8250_rs232_rts_toggle_timer        , 0);
++            timer_setup(&uart->rs232_rts_toggle_initial_timer, serial8250_rs232_rts_toggle_initial_timer, 0);
++            timer_setup(&uart->signal_timer                  , serial8250_signal_timer                  , 0);
++        }
++// Perle end for trueport
+ 
+ 		if (uart->port.type != PORT_8250_CIR) {
+ 			if (serial8250_isa_config != NULL)
+diff --git a/drivers/tty/serial/uart_trace.c b/drivers/tty/serial/uart_trace.c
+new file mode 100644
+index 000000000000..80cc27e6a139
+--- /dev/null
++++ b/drivers/tty/serial/uart_trace.c
+@@ -0,0 +1,372 @@
++#include <linux/module.h>
++#include <linux/errno.h>
++#include <linux/signal.h>
++#include <linux/sched.h>
++#include <linux/timer.h>
++#include <linux/interrupt.h>
++#include <linux/tty.h>
++#include <linux/tty_flip.h>
++#include <linux/serial.h>
++#include <linux/major.h>
++#include <linux/string.h>
++#include <linux/fcntl.h>
++#include <linux/ptrace.h>
++#include <linux/mm.h>
++#include <linux/slab.h>
++#include <linux/init.h>
++#include <linux/delay.h>
++#include <linux/miscdevice.h>
++#include <asm/uaccess.h>
++#include <asm/irq.h>
++#include <linux/serial_reg.h>
++#include <linux/uart_trace.h>
++
++static UartTrace *pUT = NULL;
++
++
++
++
++
++
++
++// convert ktime_t to microseconds
++static unsigned long getMicroSeconds(ktime_t ktime_val)
++{
++    return((unsigned long)ktime_to_us(ktime_val));
++}
++
++
++static ktime_t getMicroTicks(void)
++{
++    return(ktime_get());
++}
++
++static void getCompressedElapsed(unsigned short *pUtime)
++{
++	unsigned long now, jdiff, us, exp;
++	ktime_t ktime_now,ktime_diff;
++	
++	ktime_now = getMicroTicks();
++	ktime_diff = ktime_sub(ktime_now,pUT->microticks);
++	pUT->microticks = ktime_now;
++	
++	now = jiffies;
++	jdiff = now - pUT->jiffies;
++	pUT->jiffies = now;
++	
++	exp = 0;
++	if(jdiff >= HZ)							// 1+ seconds have passed by..
++	{
++		for(;jdiff > 4294UL; exp++)			// make sure nothing overflows
++			jdiff = jdiff >> 1;
++		us = (1000000UL * jdiff)/(unsigned long)HZ;
++	}
++	else
++	{
++		us = getMicroSeconds(ktime_diff);
++	}
++	
++	for(;us > (1 << UTIME_MANTISSA_BITS); exp++)
++		us = us >> 1;
++	
++	*pUtime = (exp << UTIME_MANTISSA_BITS) | us;
++}
++
++static int putData(TraceFifo *pF, char *pData, int dlen)
++{
++	int blen, need;
++	char *pBuf = pF->pBuf;
++
++	if(pF->end >= pF->start)
++		blen = pF->end -pF->start;
++	else
++		blen = pF->len -pF->start +pF->end;
++	
++	need = blen + dlen - pF->len;		// needed room
++//	if(need >= 0 && (pF->options & TRACE_OPTIONS_STOP))
++//		return(-1);						// exit time
++	
++	while(need >= 0)					// if not enough room
++	{
++		int slen = ((int)pBuf[pF->start] & 0xff) +1; // get start entry length
++		
++		pF->start += slen;				// move start pointer
++		if(pF->start >= pF->len)
++			pF->start -= pF->len;
++		need -= slen;
++	}
++	
++	if(pF->len - pF->end <= dlen)		// end of buffer copy
++	{
++		int mlen = pF->len -pF->end;
++		memcpy(&pBuf[pF->end], pData, mlen);
++		pF->end = 0;					// new end pointer
++		dlen -= mlen;					// move this much more
++		pData += mlen;					// this pointer
++	}
++	
++	if(dlen)
++	{
++		memcpy(&pBuf[pF->end], pData, dlen);
++		pF->end += dlen;				// this won't wrap
++	}
++
++	return(dlen);
++}
++
++static int copy_to_user_FifoRead(TraceRead *pTR, TraceFifo *pF)
++{
++	int blen, clen, dlen, rmax;
++	TraceRead tLocal;
++	char *pSrc;
++	char *pDst = (char *)pTR;
++	char *pBuf = pF->pBuf;
++	char *pEnd = &pBuf[pF->len];
++	
++	if(pF->end >= pF->start)
++		blen = pF->end -pF->start;
++	else
++		blen = pF->len -pF->start +pF->end;
++	
++	dlen = 0;
++	
++	if(blen)
++	{
++		// lets run through the records to see how many we can copy
++		for(rmax = pUT->readLength, pSrc = &pBuf[pF->start]; blen; )
++		{
++			int elen = ((int)*pSrc & 0xff) +1;	// copy one entry at a time
++			int rlen = rmax - dlen;				// remaining length to copy
++			
++			if(elen > rlen)						// too big for copy
++				break;
++			
++			dlen += elen;
++			blen -= elen;
++			
++			clen = pEnd - pSrc;					// can copy this much first
++			if(clen <= elen)					// copy in two parts
++			{
++				elen -= clen;
++				pSrc = pF->pBuf;
++			}
++			if(elen)
++			{
++				pSrc += elen;
++			}
++		}
++	}
++	
++	tLocal.dataLen = dlen;
++	tLocal.remLen = blen;
++	if (copy_to_user(pDst, &tLocal, sizeof(TraceRead)))
++	{
++		return -EFAULT;
++	}
++	pDst += sizeof(TraceRead);
++	
++	if(dlen)
++	{
++		pSrc = &pBuf[pF->start];				// start copy from here
++		clen = pF->len -pF->start;				// can copy this much first
++		if(clen <= dlen)
++		{
++			dlen -= clen;
++			if (copy_to_user(pDst, pSrc, clen))
++            {
++                return -EFAULT;
++            }
++			pDst += clen;
++			pSrc = pF->pBuf;
++			pF->start = 0;
++		}
++		if(dlen)
++		{
++			if (copy_to_user(pDst, pSrc, dlen))
++            {
++                return -EFAULT;
++            }
++			pF->start += dlen;
++		}
++	}
++	return(0);	
++}
++
++static unsigned long uartTraceStartJiffies;
++
++int uartTraceStart(int readLength)
++{
++	unsigned long flags;
++	UartTrace *pAlloc;
++	unsigned short utime;
++	unsigned long now = jiffies;
++	
++	if(readLength == 0)
++		return(0);
++	if(!pUT)
++    {
++        pAlloc = (UartTrace *)kmalloc(sizeof(UartTrace), GFP_ATOMIC);
++        if(pAlloc == NULL)
++            return(-ENOMEM);
++        memset(pAlloc, 0, sizeof(UartTrace));
++        pAlloc->fifo.pBuf = pAlloc->data;
++        pAlloc->fifo.len = UART_TRACE_LENGTH;
++		uartTraceStartJiffies = 0;
++    }
++    else
++    {
++        pAlloc = pUT;
++    }
++	
++	// Fix small problem when starting multiple port traces at once...
++	if(now < uartTraceStartJiffies || now > (uartTraceStartJiffies + HZ))
++    pAlloc->fifo.start = pAlloc->fifo.end = 0;
++
++	pAlloc->readLength = readLength;
++	uartTraceStartJiffies = now;
++	
++	local_irq_save(flags);
++	pUT = pAlloc;
++    getCompressedElapsed(&utime);
++	local_irq_restore(flags);
++	
++	return(0);
++}
++EXPORT_SYMBOL(uartTraceStart);
++
++int uartTraceRead(TraceRead *pTR)
++{
++	unsigned long flags;
++	
++	if(pUT == NULL)
++		return(-EACCES);
++	
++	local_irq_save(flags);
++	copy_to_user_FifoRead(pTR, &pUT->fifo);
++	local_irq_restore(flags);
++	
++	return(0);
++}
++EXPORT_SYMBOL(uartTraceRead);
++
++static int uartTraceAddHelper(int port, int type, int len, const char *pData)
++{
++	int elen;
++	unsigned long flags;
++	TraceEntry entry;
++	
++	if(len > MAX_TRACE_DATA || pUT == NULL)
++	{
++	    pr_err("(%s,%s,%d): len (%d) exceeds the maximum allowed (%d)...ignoring\n",__FILE__,__FUNCTION__,__LINE__,len, MAX_TRACE_DATA);
++		return(-1);
++	}
++	elen = sizeof(TraceEntry) - MAX_TRACE_DATA + len;
++	entry.len = (unsigned char)(elen -1);
++	entry.type = (unsigned char)type;
++	entry.port = (unsigned char)port;
++	memcpy(entry.data, pData, len);
++	
++	local_irq_save(flags);
++	getCompressedElapsed(&entry.utime);
++	putData(&pUT->fifo, (char *)&entry, elen);
++	local_irq_restore(flags);
++	
++	return(elen);
++}
++
++/*
++ * returns: total # of bytes used in the trace buffer (including the TraceEntry header (5 bytes).
++ */
++int uartTraceAdd(int port, int type, int len, const unsigned char *pData)
++{
++    int ret_len=0;
++    int len_to_process=0;
++    int index_to_process=0;
++    int status;
++
++    while(len)
++    {
++        if (len > MAX_TRACE_DATA)
++        {
++            len_to_process=MAX_TRACE_DATA;
++        }
++        else
++        {
++            len_to_process=len;
++        }
++        status=uartTraceAddHelper(port,type,len_to_process,&pData[index_to_process]);
++        if (status < 0)
++        {
++            ret_len=status;
++            break;
++        }
++        len-=len_to_process;
++        index_to_process+=len_to_process;
++        ret_len+=status;
++    }
++    return(ret_len);
++}
++EXPORT_SYMBOL(uartTraceAdd);
++
++int uartTraceAddSignals(int port, int *pSignals, int MCR, int MSR)
++{
++	int signals, retc;
++	
++	retc=0;
++	signals =  ((MCR & UART_MCR_RTS) ? TIOCM_RTS : 0)
++		| ((MCR & UART_MCR_DTR) ? TIOCM_DTR : 0)
++		| ((MCR & UART_MCR_OUT1) ? TIOCM_OUT1 : 0)
++		| ((MCR & UART_MCR_OUT2) ? TIOCM_OUT2 : 0)
++		| ((MSR  & UART_MSR_DCD) ? TIOCM_CAR : 0)
++		| ((MSR  & UART_MSR_RI) ? TIOCM_RNG : 0)
++		| ((MSR  & UART_MSR_DSR) ? TIOCM_DSR : 0)
++		| ((MSR  & UART_MSR_CTS) ? TIOCM_CTS : 0);
++		
++	if(*pSignals != signals)
++	{
++		retc = uartTraceAdd(port, TRACE_SIGNALS, sizeof(signals), (char *)&signals);
++		*pSignals = signals;
++	}
++	return(retc);
++}
++EXPORT_SYMBOL(uartTraceAddSignals);
++
++int uartTraceAddSignalsTIOCM(int port, int *pSignals, int MCR, int MSR)
++{
++    int signals, retc;
++
++    retc=0;
++    signals = (MCR & (TIOCM_RTS | TIOCM_DTR | TIOCM_OUT1 | TIOCM_OUT2)) |
++              (MSR & (TIOCM_CAR | TIOCM_RNG | TIOCM_DSR | TIOCM_CTS));
++
++    if(*pSignals != signals)
++    {
++        retc = uartTraceAdd(port, TRACE_SIGNALS, sizeof(signals), (char *)&signals);
++        *pSignals = signals;
++    }
++    return(retc);
++}
++EXPORT_SYMBOL(uartTraceAddSignalsTIOCM);
++
++
++int uartTraceAddSpecial(int port, short sp)
++{
++	return(uartTraceAdd(port, TRACE_SPECIAL, sizeof(sp), (char *)&sp));
++}
++EXPORT_SYMBOL(uartTraceAddSpecial);
++
++int uartTraceAddIoctl(int port, int ioctl)
++{
++    if(ioctl == TRACEREAD)  // don't fill up the trace with myself please
++    {
++        return(0);
++    }
++    else
++    {
++	return(uartTraceAdd(port, TRACE_IOCTL, sizeof(ioctl), (char *)&ioctl));
++    }
++}
++EXPORT_SYMBOL(uartTraceAddIoctl);
++
++
++
+diff --git a/include/linux/perle_serial.h b/include/linux/perle_serial.h
+new file mode 100644
+index 000000000000..3e2a14b174bc
+--- /dev/null
++++ b/include/linux/perle_serial.h
+@@ -0,0 +1,31 @@
++#ifndef _LINUX_PERLE_SERIAL_H
++#define _LINUX_PERLE_SERIAL_H
++
++#if !defined(TRUE)
++#define TRUE    1
++#endif
++#if !defined(FALSE)
++#define FALSE   0
++#endif
++
++// forwarding options
++#define PERLE_SERIAL_FORWARD_ON_CHAR                    (DS_FORWARD_ON_CHAR1|DS_FORWARD_ON_CHAR2)
++#define PERLE_SERIAL_FORWARD_ON_FRAME                   (DS_FORWARD_START_CHAR1|DS_FORWARD_START_CHAR2|DS_FORWARD_END_CHAR1|DS_FORWARD_END_CHAR2)
++
++#define PERLE_SERIAL_FORWARD_STATE_START_1OF1           0
++#define PERLE_SERIAL_FORWARD_STATE_START_1OF2           1
++#define PERLE_SERIAL_FORWARD_STATE_START_2OF2           2
++#define PERLE_SERIAL_FORWARD_STATE_END_1OF1             3
++#define PERLE_SERIAL_FORWARD_STATE_END_1OF2             4
++#define PERLE_SERIAL_FORWARD_STATE_END_2OF2             5
++#define PERLE_SERIAL_FORWARD_STATE_WAITING_1OF1         6
++#define PERLE_SERIAL_FORWARD_STATE_WAITING_1OF2         7
++#define PERLE_SERIAL_FORWARD_STATE_WAITING_2OF2         8
++
++#define PERLE_SERIAL_DS_FLIPBUF_SIZE                    1024
++#define PERLE_SERIAL_FORWARD_SEND_TIMEOUT               (2 * HZ / 1000)
++
++//#define PERLE_SERIAL_DEBUG_RTSTOGGLE 1
++
++#endif  // _LINUX_PERLE_SERIAL_H
++
+diff --git a/include/uapi/linux/uart_trace.h b/include/uapi/linux/uart_trace.h
+new file mode 100644
+index 000000000000..f886db2ba24e
+--- /dev/null
++++ b/include/uapi/linux/uart_trace.h
+@@ -0,0 +1,91 @@
++#ifndef _UAPI_LINUX_UART_TRACE_H
++#define _UAPI_LINUX_UART_TRACE_H
++
++#define MAX_TRACE_DATA 251
++#define UTIME_MANTISSA_BITS 10
++typedef struct
++{
++	unsigned char len;		/* 1->255 bytes follow */
++	unsigned char type;
++    unsigned short utime;
++	unsigned char port;
++	char data[MAX_TRACE_DATA];
++} TraceEntry;
++
++typedef struct
++{
++    unsigned long mask;
++    int maxTraceLength;
++    int port;           // 0 based port index of iolan
++} TraceControl;
++
++typedef struct
++{
++	int 	dataLen;						/* transferred length */
++	int		remLen;							/* amount left to transfer */
++} TraceRead;
++
++
++enum
++{
++	TRACE_HEADER,
++	TRACE_IN,
++	TRACE_OUT,
++	TRACE_SIGNALS,
++	TRACE_SPECIAL,
++	TRACE_IOCTL
++};
++
++#define TRACE_BITS_IN (1 << TRACE_IN)
++#define TRACE_BITS_OUT (1 << TRACE_OUT)
++#define TRACE_BITS_SIGNALS (1 << TRACE_SIGNALS)
++#define TRACE_BITS_SPECIAL (1 << TRACE_SPECIAL)
++#define TRACE_BITS_IOCTL (1 << TRACE_IOCTL)
++
++enum
++{
++	UTR_MASK = 0xff00,
++	UTR_PARITY = 0x100,
++	UTR_FRAME = 0x200,
++	UTR_OVERRUN = 0x300,
++	UTR_TTY_OVERRUN = 0x400,
++	UTR_RX_BREAK = 0x500,
++	UTR_TX_BREAK = 0x600
++};
++
++typedef struct
++{
++	char *pBuf;							/* pointer to FIFO buffer */
++	int	len;							/* length of buffer */
++	int	start;							/* oldest index */
++	int	end;							/* next index */
++	int	options;						/* trace options */
++	
++} TraceFifo;
++
++#define UART_TRACE_LENGTH 32768
++typedef struct
++{
++	TraceFifo fifo;
++	char	data[UART_TRACE_LENGTH];
++	
++	unsigned long jiffies;
++	ktime_t microticks;
++	
++	int readLength;
++	
++} UartTrace;
++
++
++
++
++int uartTraceStart(int readLength);
++int uartTraceRead(TraceRead *pTR);
++int uartTraceAdd(int port, int type, int len, const unsigned char *pData);
++int uartTraceAddSignals(int port, int *pSignals, int MCR, int MSR);         // MCR and MSR use the UART_MCR_xxxx and UART_MSR_xxxx uart register #defines
++int uartTraceAddSignalsTIOCM(int port, int *pSignals, int MCR, int MSR);    // MCR and MSR use the ioctl TIOCM_xxx #defines
++int uartTraceAddSpecial(int port, short sp);
++int uartTraceAddIoctl(int port, int ioctl);
++
++#endif	/* __UART_TRACE__ */
++

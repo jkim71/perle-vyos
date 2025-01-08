@@ -39,7 +39,7 @@ index 9cf563e5738d..d116d485c099 100644
  		power-domains = <&k3_pds 78 TI_SCI_PD_EXCLUSIVE>;
  		clocks = <&k3_clks 78 0>;
 diff --git a/arch/arm64/boot/dts/ti/k3-am642-evm.dts b/arch/arm64/boot/dts/ti/k3-am642-evm.dts
-index 91d726ef7594..51db0583acae 100644
+index 91d726ef7594..207ebcaf011a 100644
 --- a/arch/arm64/boot/dts/ti/k3-am642-evm.dts
 +++ b/arch/arm64/boot/dts/ti/k3-am642-evm.dts
 @@ -18,7 +18,7 @@ / {
@@ -86,13 +86,15 @@ index 91d726ef7594..51db0583acae 100644
  		>;
  	};
  
-@@ -290,6 +302,22 @@ AM64X_IOPAD(0x026c, PIN_INPUT_PULLUP, 0) /* (B19) I2C1_SDA */
+@@ -290,6 +302,24 @@ AM64X_IOPAD(0x026c, PIN_INPUT_PULLUP, 0) /* (B19) I2C1_SDA */
  		>;
  	};
  
 +	/* Digital IOs */
 +	main_gpio0_digital_pins: main-gpio0-digital-pins {
 +		pinctrl-single,pins = <
++			AM64X_IOPAD(0x0030, PIN_INPUT, 7) /* (L18) GPIO0_12 */
++			AM64X_IOPAD(0x0034, PIN_INPUT, 7) /* (K17) GPIO0_13 */
 +		>;
 +	};
 +
@@ -109,7 +111,7 @@ index 91d726ef7594..51db0583acae 100644
  	mdio1_pins_default: mdio1-default-pins {
  		bootph-all;
  		pinctrl-single,pins = <
-@@ -390,14 +418,28 @@ &main_uart0 {
+@@ -390,14 +420,28 @@ &main_uart0 {
  	status = "okay";
  	pinctrl-names = "default";
  	pinctrl-0 = <&main_uart0_pins_default>;
@@ -139,7 +141,7 @@ index 91d726ef7594..51db0583acae 100644
  };
  
  &main_i2c0 {
-@@ -457,6 +499,58 @@ display@3c {
+@@ -457,6 +501,58 @@ display@3c {
  
  &main_gpio0 {
  	bootph-all;

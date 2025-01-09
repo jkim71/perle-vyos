@@ -92,7 +92,7 @@ index 3449f8790e46..ebbf2d216fb9 100644
  		if (uart->port.type != PORT_8250_CIR) {
  			if (serial8250_isa_config != NULL)
 diff --git a/drivers/tty/serial/8250/8250_port.c b/drivers/tty/serial/8250/8250_port.c
-index a17803da83f8..03c1707cba16 100644
+index a17803da83f8..3575dfb750a3 100644
 --- a/drivers/tty/serial/8250/8250_port.c
 +++ b/drivers/tty/serial/8250/8250_port.c
 @@ -37,7 +37,11 @@
@@ -116,7 +116,7 @@ index a17803da83f8..03c1707cba16 100644
 +
 +//#define SERIAL_DEBUG_SEND_SIGNAL
 +//#define SERIAL_DEBUG_RTSTOGGLE
-+// # define SERIAL_DEBUG_RTSTOGGLE 1
++#define SERIAL_DEBUG_RTSTOGGLE 1
 +#include <linux/sched/signal.h>
 +// extern char procSigScan[];	// one for each port
 +char procSigScan[256];
@@ -1984,19 +1984,10 @@ index a17803da83f8..03c1707cba16 100644
   */
  int serial8250_handle_irq(struct uart_port *port, unsigned int iir)
  {
-+    printk("Enter handle irq \n");
++
  	struct uart_8250_port *up = up_to_u8250p(port);
  	struct tty_port *tport = &port->state->port;
  	bool skip_rx = false;
-@@ -1947,7 +3702,7 @@ int serial8250_handle_irq(struct uart_port *port, unsigned int iir)
- 	}
- 
- 	uart_unlock_and_check_sysrq_irqrestore(port, flags);
--
-+    printk("Exit handle irq \n");
- 	return 1;
- }
- EXPORT_SYMBOL_GPL(serial8250_handle_irq);
 @@ -2022,7 +3777,13 @@ unsigned int serial8250_do_get_mctrl(struct uart_port *port)
  	val = serial8250_MSR_to_TIOCM(status);
  	if (up->gpios)

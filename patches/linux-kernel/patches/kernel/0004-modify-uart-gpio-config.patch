@@ -75,9 +75,9 @@ index 91d726ef7594..207ebcaf011a 100644
  			AM64X_IOPAD(0x023c, PIN_OUTPUT, 0) /* (A16) UART0_RTSn */
  			AM64X_IOPAD(0x0230, PIN_INPUT, 0) /* (D15) UART0_RXD */
  			AM64X_IOPAD(0x0234, PIN_OUTPUT, 0) /* (C16) UART0_TXD */
-+			/* AM64X_IOPAD(0x01B4, PIN_INPUT, 7) */ /* (W2) GPIO1_21 => UART0_DTRn */
++			/* AM64X_IOPAD(0x01B4, PIN_OUTPUT, 7) */ /* (W2) GPIO1_21 => UART0_DTRn */
 +			/* AM64X_IOPAD(0x01B0, PIN_INPUT, 7) */ /* (Y2) GPIO1_20 => UART0_DCDn */
-+			/* AM64X_IOPAD(0x0170, PIN_OUTPUT, 7) */ /* (AA2) GPIO1_4 => UART0_RIn */
++			/* AM64X_IOPAD(0x0170, PIN_INPUT, 7) */ /* (AA2) GPIO1_4 => UART0_RIn */
 +			/* AM64X_IOPAD(0x0190, PIN_INPUT, 7) */ /* (AA3) GPIO1_12 => UART0_DSRn */
 +			/* AM64X_IOPAD(0x0254, PIN_INPUT, 9) */ /* (B17) UART0_RIn */
 +			/* AM64X_IOPAD(0x0250, PIN_OUTPUT, 9) */ /* (A17) UART0_DTRn */
@@ -101,9 +101,9 @@ index 91d726ef7594..207ebcaf011a 100644
 +	/* Digital IOs */
 +	main_gpio1_digital_pins: main-gpio1-digital-pins {
 +		pinctrl-single,pins = <
-+			AM64X_IOPAD(0x01B4, PIN_INPUT, 7) /* (W2) GPIO1_21 => UART0_DTRn */
++			AM64X_IOPAD(0x01B4, PIN_OUTPUT, 7) /* (W2) GPIO1_21 => UART0_DTRn */
 +			AM64X_IOPAD(0x01B0, PIN_INPUT, 7) /* (Y2) GPIO1_20 => UART0_DCDn */
-+			AM64X_IOPAD(0x0170, PIN_OUTPUT, 7) /* (AA2) GPIO1_4 => UART0_RIn */
++			AM64X_IOPAD(0x0170, PIN_INPUT, 7) /* (AA2) GPIO1_4 => UART0_RIn */
 +			AM64X_IOPAD(0x0190, PIN_INPUT, 7) /* (AA3) GPIO1_12 => UART0_DSRn */
 +		>;
 +	};

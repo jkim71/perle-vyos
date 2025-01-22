@@ -28,6 +28,7 @@ packages=(
     "ethtool"
     "frr"
     "frr_exporter"
+    "blackbox_exporter"
 #    "hostap"
 #    "hsflowd"
     "isc-dhcp"
@@ -37,7 +38,7 @@ packages=(
 #    "netfilter"
 #    "net-snmp"
     "node_exporter"
-    "opennhrp"
+#    "opennhrp"
     "openvpn-otp"
     "owamp"
 #    "pam_tacplus"
@@ -47,6 +48,8 @@ packages=(
 #    "radvd"
     "strongswan"
     "telegraf"
+    "vpp"
+    "vyos-1x"
     "vyos"
 #    "waagent"
 #    "wide-dhcpv6"
@@ -181,6 +184,7 @@ if true; then
 fi
 
 if true; then
+    host_arch=`uname -m`
     if [ "$host_arch" == "aarch64" ]; then
         cd ${CWD}
         echo ""

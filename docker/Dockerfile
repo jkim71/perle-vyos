@@ -137,7 +137,10 @@ RUN dpkg-reconfigure ca-certificates; \
 # Installing OCAML needed to compile libvyosconfig
 RUN curl https://raw.githubusercontent.com/ocaml/opam/master/shell/install.sh \
       --output /tmp/opam_install.sh --retry 10 --retry-delay 5 && \
-    sed -i 's/read -r BINDIR/BINDIR=""/' /tmp/opam_install.sh && sh /tmp/opam_install.sh && \
+    sed -i -e 's/read_tty BINDIR$/BINDIR=""/' \
+           -e 's/read_tty R$/R=""/' \
+                /tmp/opam_install.sh && \
+    sh /tmp/opam_install.sh && \
     opam init --root=/opt/opam --comp=${OCAML_VERSION} --disable-sandboxing --no-setup
 
 RUN eval $(opam env --root=/opt/opam --set-root) && \
@@ -152,10 +155,6 @@ RUN eval $(opam env --root=/opt/opam --set-root) && opam install -y \
       containers \
       fileutils \
       xml-light
-
-# Build VyConf which is required to build libvyosconfig
-#RUN eval $(opam env --root=/opt/opam --set-root) && \
-#    opam pin add vyos1x-config https://github.com/vyos/vyos1x-config.git#d7260e772e39bc6a3a#2d76d629567e03bbad16b5 -y
 
 # Packages needed for libvyosconfig
 RUN apt-get update && apt-get install -y \
@@ -208,7 +207,6 @@ RUN wget https://salsa.debian.org/klausenbusk-guest/debootstrap/commit/a9a603b17
     sudo dpkg -i ../debootstrap*.deb
 
 # Packages needed for Linux Kernel
-# gnupg2 is required by Jenkins for the TAR verification
 # cmake required by accel-ppp
 RUN apt-get update && apt-get install -y \
       cmake \
@@ -241,7 +239,7 @@ RUN gem install --no-document fpm
 # Packages needed for vyos-1x
 RUN pip install --break-system-packages \
       git+https://github.com/aristanetworks/j2lint.git@341b5d5db86 \
-      pyhumps==3.8.0 && \
+      pyhumps==3.8.0; \
     apt-get update && apt-get install -y \
       dh-python \
       fakeroot \
@@ -277,11 +275,6 @@ RUN GO_VERSION_INSTALL="1.23.2" ; \
     tar -C /opt -xzf /tmp/go*.tar.gz && \
     rm /tmp/go*.tar.gz
 RUN echo "export PATH=/opt/go/bin:$PATH" >> /etc/bash.bashrc
-
-# Packages needed for opennhrp
-RUN apt-get update && apt-get install -y \
-      libc-ares-dev \
-      libev-dev
 
 # Packages needed for Qemu test-suite
 # This is for now only supported on i386 and amd64 platforms
@@ -372,6 +365,7 @@ RUN apt-get update && apt-get install -y \
 RUN apt-get update && apt-get install -y \
       libnl-genl-3-dev \
       libxtables-dev
+
 # Packages needed for OWAMP - JF
 RUN apt-get update && apt-get install -y \
       dh-apparmor \

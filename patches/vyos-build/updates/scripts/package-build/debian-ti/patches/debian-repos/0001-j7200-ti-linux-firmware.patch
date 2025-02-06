@@ -1,0 +1,72 @@
+diff --git a/ti-linux-firmware/suite/bookworm/debian/control b/ti-linux-firmware/suite/bookworm/debian/control
+index f2088ac..782cec2 100644
+--- a/ti-linux-firmware/suite/bookworm/debian/control
++++ b/ti-linux-firmware/suite/bookworm/debian/control
+@@ -47,6 +47,21 @@ Architecture: all
+ Description: TI IPC firmware for AM64
+  This package provides TI IPC firmwares for remoteprocs on AM64
+ 
++Package: firmware-ti-eth-j7200
++Depends: ${misc:Depends}
++Architecture: all
++Description: Ethernet firmware for J7200
++ This package provides Ethernet firmware for J7200
++
++Package: firmware-ti-ipc-j7200
++Provides: firmware-ti-ipc
++Conflicts: firmware-ti-ipc
++Replaces: firmware-ti-ipc
++Depends: ${misc:Depends}
++Architecture: all
++Description: TI IPC firmware for J7200
++ This package provides TI IPC firmwares for remoteprocs on J7200
++
+ Package: firmware-ti-ipc-j721e
+ Provides: firmware-ti-ipc
+ Conflicts: firmware-ti-ipc
+diff --git a/ti-linux-firmware/suite/bookworm/debian/firmware-ti-eth-j7200.install b/ti-linux-firmware/suite/bookworm/debian/firmware-ti-eth-j7200.install
+new file mode 100644
+index 0000000..165a338
+--- /dev/null
++++ b/ti-linux-firmware/suite/bookworm/debian/firmware-ti-eth-j7200.install
+@@ -0,0 +1 @@
++ti-eth/j7200/* /lib/firmware/ti-eth/
+diff --git a/ti-linux-firmware/suite/bookworm/debian/firmware-ti-eth-j7200.links b/ti-linux-firmware/suite/bookworm/debian/firmware-ti-eth-j7200.links
+new file mode 100644
+index 0000000..3fd73ba
+--- /dev/null
++++ b/ti-linux-firmware/suite/bookworm/debian/firmware-ti-eth-j7200.links
+@@ -0,0 +1 @@
++/lib/firmware/ti-eth/app_remoteswitchcfg_server_strip.xer5f /lib/firmware/j7200-main-r5f0_0-fw
+diff --git a/ti-linux-firmware/suite/bookworm/debian/firmware-ti-ipc-j7200.install b/ti-linux-firmware/suite/bookworm/debian/firmware-ti-ipc-j7200.install
+new file mode 100644
+index 0000000..4c69eff
+--- /dev/null
++++ b/ti-linux-firmware/suite/bookworm/debian/firmware-ti-ipc-j7200.install
+@@ -0,0 +1 @@
++ti-ipc/j7200/* /lib/firmware/ti-ipc/
+diff --git a/ti-linux-firmware/suite/bookworm/debian/firmware-ti-ipc-j7200.links b/ti-linux-firmware/suite/bookworm/debian/firmware-ti-ipc-j7200.links
+new file mode 100644
+index 0000000..e64b76a
+--- /dev/null
++++ b/ti-linux-firmware/suite/bookworm/debian/firmware-ti-ipc-j7200.links
+@@ -0,0 +1,2 @@
++/lib/firmware/ti-ipc/ipc_echo_test_mcu1_1_release_strip.xer5f /lib/firmware/j7200-mcu-r5f0_1-fw
++/lib/firmware/ti-ipc/ipc_echo_test_mcu2_1_release_strip.xer5f /lib/firmware/j7200-main-r5f0_1-fw
+diff --git a/ti-linux-firmware/suite/bookworm/debian/source/lintian-overrides b/ti-linux-firmware/suite/bookworm/debian/source/lintian-overrides
+index a3133b1..6031e8d 100644
+--- a/ti-linux-firmware/suite/bookworm/debian/source/lintian-overrides
++++ b/ti-linux-firmware/suite/bookworm/debian/source/lintian-overrides
+@@ -15,6 +15,12 @@ firmware-ti-ipc-am62a: unstripped-binary-or-object [lib/firmware/*]
+ firmware-ti-ipc-am64: binary-from-other-architecture [lib/firmware/*]
+ firmware-ti-ipc-am64: statically-linked-binary [lib/firmware/*]
+ firmware-ti-ipc-am64: unstripped-binary-or-object [lib/firmware/*]
++firmware-ti-eth-j7200: binary-from-other-architecture [lib/firmware/ti-eth/*]
++firmware-ti-eth-j7200: statically-linked-binary [lib/firmware/ti-eth/*]
++firmware-ti-eth-j7200: unstripped-binary-or-object [lib/firmware/ti-eth/*]
++firmware-ti-ipc-j7200: binary-from-other-architecture [lib/firmware/*]
++firmware-ti-ipc-j7200: statically-linked-binary [lib/firmware/*]
++firmware-ti-ipc-j7200: unstripped-binary-or-object [lib/firmware/*]
+ firmware-ti-ipc-j721e: binary-from-other-architecture [lib/firmware/*]
+ firmware-ti-ipc-j721e: statically-linked-binary [lib/firmware/*]
+ firmware-ti-ipc-j721e: unstripped-binary-or-object [lib/firmware/*]

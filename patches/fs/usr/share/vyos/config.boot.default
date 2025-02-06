@@ -19,7 +19,7 @@ system {
         }
     }
      console {
-        device ttyS1 {
+        device ttyS2 {
             speed 115200
         }
     }

@@ -11,7 +11,7 @@ C_MAGENTA=$(tput setaf 5) #"\e[35m"
 C_CYAN=$(tput setaf 6) #"\e[36m"
 C_WHITE=$(tput setaf 7)
 
-TARGET_NAME=bookworm-am64xx-evm
+TARGET_NAME=bookworm-j7200-evm
 TI_PATH=vyos-build/ti-bdebstrap
 
 set -e

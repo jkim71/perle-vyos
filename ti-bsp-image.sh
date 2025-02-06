@@ -98,8 +98,8 @@ echo ""
 echo "I: Building BSP Images"
 cd $VYOS_BUILD_DIR
 if $READ_SUDO_PIN; then
-    ./build-am64x-boot.sh $PATCH_DIR $SUDO_PIN
+    ./build-j7200-boot.sh $PATCH_DIR $SUDO_PIN
 else
-    ./build-am64x-boot.sh $PATCH_DIR
+    ./build-j7200-boot.sh $PATCH_DIR
 fi
 Elapse_Time "BSP Image build time" $TIME_START

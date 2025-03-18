@@ -1,0 +1,390 @@
+diff --git a/build.sh b/build.sh
+index 482d029..b1b1be3 100755
+--- a/build.sh
++++ b/build.sh
+@@ -47,7 +47,7 @@ do
+         distro=${distro_codename}-${machine}
+     fi
+ 
+-    bsp_version=($(read_bsp_config ${distro_codename} bsp_version))
++    bsp_version=($(read_bsp_config ${distro} bsp_version))
+ 
+     export host_arch=`uname -m`
+     export native_build=false
+diff --git a/builds.toml b/builds.toml
+index b64682b..7776d8a 100644
+--- a/builds.toml
++++ b/builds.toml
+@@ -24,6 +24,8 @@ builds = [
+     "bookworm-rt-am62xxsip-evm",
+     "bookworm-am64xx-evm",
+     "bookworm-rt-am64xx-evm",
++    "bookworm-j7200-evm",
++    "bookworm-rt-j7200-evm",
+ ]
+ 
+ # List of all valid trixie builds
+@@ -138,3 +140,12 @@ builds = [
+     distro_codename = "bookworm"
+     rt_linux = "true"
+ 
++[bookworm-j7200-evm]
++    machine = "j7200-evm"
++    distro_codename = "bookworm"
++    rt_linux = "false"
++
++[bookworm-rt-j7200-evm]
++    machine = "j7200-evm"
++    distro_codename = "bookworm"
++    rt_linux = "true"
+diff --git a/configs/bdebstrap_configs/bookworm/bookworm-j7200-evm.yaml b/configs/bdebstrap_configs/bookworm/bookworm-j7200-evm.yaml
+new file mode 100644
+index 0000000..521cb6b
+--- /dev/null
++++ b/configs/bdebstrap_configs/bookworm/bookworm-j7200-evm.yaml
+@@ -0,0 +1,84 @@
++---
++mmdebstrap:
++  architectures:
++    - arm64
++  mode: auto
++  keyrings:
++    - /usr/share/keyrings/debian-archive-keyring.gpg
++  suite: bookworm
++  variant: standard
++  hostname: j7200-evm
++  components:
++    - main
++    - contrib
++    - non-free-firmware
++  packages:
++    - build-essential
++    - gpg
++    - curl
++    - firmware-ti-connectivity
++    - init
++    - iproute2
++    - less
++    - libdrm-dev
++    - libpam-systemd
++    - locales
++    - neofetch
++    - network-manager
++    - net-tools
++    - openssh-server
++    - sudo
++    - vim
++    - k3conf
++    - weston
++    - linux-image-6.1.83-k3
++    - linux-headers-6.1.83-k3
++    - linux-libc-dev
++    - cryptodev-linux-dkms
++    - firmware-ti-ipc-j7200
++    - firmware-cnm-wave
++    - firmware-ti-eth-j7200
++    - libti-rpmsg-char
++    - libti-rpmsg-char-dev
++    - libpru-pssp-dev
++    - pru-pssp
++    - parted
++    - e2fsprogs
++  mirrors:
++    - http://deb.debian.org/debian
++  setup-hooks:
++      # Setup TI Debian Package Repository
++    - 'mkdir -p $1/etc/apt/sources.list.d/'
++    - 'wget https://raw.githubusercontent.com/TexasInstruments/ti-debpkgs/main/ti-debpkgs.sources -P $1/etc/apt/sources.list.d/'
++      # Setup Apt repository preferences
++    - 'mkdir -p $1/etc/apt/preferences.d/'
++    - 'printf "Package: *\nPin: origin TexasInstruments.github.io\nPin-Priority: 1001" >> $1/etc/apt/preferences.d/ti-debpkgs'
++      # Setup Kernel post-install scripts
++    - 'mkdir -p $1/etc/kernel/postinst.d/'
++    - 'echo "PWD = $PWD"'
++    - 'upload target/kernel/postinst.d/cp-kernel-and-overlays /etc/kernel/postinst.d/cp-kernel-and-overlays'
++    - 'chmod a+x $1/etc/kernel/postinst.d/cp-kernel-and-overlays'
++  essential-hooks:
++    # FIXME: Find a better workaround instead of sleep
++    - 'sleep 10' # workaround for /proc resource busy unable to umount issue
++  customize-hooks:
++      # Remove passwd for root user
++    - 'chroot "$1" passwd --delete root'
++      # Fix apt install mandb permission issue
++    - 'chroot "$1" chown -R man: /var/cache/man/'
++    - 'chroot "$1" chmod -R 755 /var/cache/man/'
++      # update packages to avoid mandatory update after first boot
++    - 'chroot "$1" apt-get update'
++      # Setup .bashrc for clean command-line experience
++    - 'chroot "$1" cp /etc/skel/.bashrc ~/.bashrc'
++      # Enable ssh to root user without password
++    - 'chroot "$1" echo "PermitRootLogin yes" >> $1/etc/ssh/sshd_config'
++    - 'chroot "$1" echo "PermitEmptyPasswords yes" >> $1/etc/ssh/sshd_config'
++      # Resize Rootfs Service
++    - 'chroot "$1" mkdir -p /usr/bin'
++    - 'upload target/resize_rootfs/resize_rootfs.sh /usr/bin/resize_rootfs.sh'
++    - 'chroot "$1" chmod a+x /usr/bin/resize_rootfs.sh'
++    - 'chroot "$1" mkdir -p /etc/systemd/system/'
++    - 'upload target/resize_rootfs/resize_rootfs.service /etc/systemd/system/resize_rootfs.service'
++    - '$BDEBSTRAP_HOOKS/enable-units "$1" resize_rootfs'
++
+diff --git a/configs/bsp_sources.toml b/configs/bsp_sources.toml
+index 22d588d..85b2179 100644
+--- a/configs/bsp_sources.toml
++++ b/configs/bsp_sources.toml
+@@ -2,9 +2,12 @@
+ [trixie]
+     bsp_version = "11.00.05.02"
+ 
+-[bookworm]
++[bookworm-am64xx-evm]
+     bsp_version = "09.02.00.010"
+ 
++[bookworm-j7200-evm]
++    bsp_version = "09.02.00.011"
++
+ # BSP Configurations
+ [11.00.05.02]
+     atf_srcrev = "dd46885ec58f9394b37f0c3d957e79838999b79d"
+@@ -18,3 +21,8 @@
+     uboot_srcrev = "09.02.00.010"
+     linux_fw_srcrev = "09.02.00.010"
+ 
++[09.02.00.011]
++    atf_srcrev = "58b25570c9ef91753b14c2103f45f4be9dddb696"
++    optee_srcrev = "4.4.0"
++    uboot_srcrev = "10.01.08"
++    linux_fw_srcrev = "ti-linux-firmware"
+diff --git a/configs/machines/09.02.00.010.toml b/configs/machines/09.02.00.010.toml
+index d6e44b0..ca107b1 100644
+--- a/configs/machines/09.02.00.010.toml
++++ b/configs/machines/09.02.00.010.toml
+@@ -44,3 +44,12 @@
+     optee_make_args = "."
+     uboot_r5_defconfig = "am64x_evm_r5_defconfig"
+     uboot_a53_defconfig = "am64x_evm_a53_defconfig"
++
++[j7200-evm]
++    # u-boot config
++    atf_target_board = "generic"
++    atf_make_args="K3_PM_SYSTEM_SUSPEND=1"
++    optee_platform = "k3-j721e"
++    optee_make_args = "ta-targets=ta_arm64"
++    uboot_r5_defconfig = "j7200_evm_r5_defconfig"
++    uboot_a72_defconfig = "j7200_evm_a72_defconfig"
+diff --git a/configs/machines/09.02.00.011.toml b/configs/machines/09.02.00.011.toml
+new file mode 100644
+index 0000000..ca107b1
+--- /dev/null
++++ b/configs/machines/09.02.00.011.toml
+@@ -0,0 +1,55 @@
++# This file describes various machine specific settings needed for the build
++
++[am62pxx-evm]
++    # u-boot config
++    atf_target_board = "lite"
++    atf_make_args="K3_PM_SYSTEM_SUSPEND=1"
++    optee_platform = "k3-am62px"
++    optee_make_args = "CFG_WITH_SOFTWARE_PRNG=y CFG_TEE_CORE_LOG_LEVEL=1"
++    uboot_r5_defconfig = "am62px_evm_r5_defconfig"
++    uboot_a53_defconfig = "am62px_evm_a53_defconfig"
++
++[am62xx-evm]
++    # u-boot config
++    atf_target_board = "lite"
++    atf_make_args="K3_PM_SYSTEM_SUSPEND=1"
++    optee_platform = "k3-am62x"
++    optee_make_args = "CFG_TEE_CORE_LOG_LEVEL=1"
++    uboot_r5_defconfig = "am62x_evm_r5_defconfig"
++    uboot_a53_defconfig = "am62x_evm_a53_defconfig"
++
++[am62xx-lp-evm]
++    # u-boot config
++    atf_target_board = "lite"
++    atf_make_args="K3_PM_SYSTEM_SUSPEND=1"
++    optee_platform = "k3-am62x"
++    optee_make_args = "CFG_TEE_CORE_LOG_LEVEL=1"
++    uboot_r5_defconfig = "am62x_lpsk_r5_defconfig"
++    uboot_a53_defconfig = "am62x_lpsk_a53_defconfig"
++
++[am62xxsip-evm]
++    # u-boot config
++    atf_target_board = "lite"
++    atf_make_args="K3_PM_SYSTEM_SUSPEND=1"
++    optee_platform = "k3-am62x"
++    optee_make_args = "CFG_TEE_CORE_LOG_LEVEL=1"
++    uboot_r5_defconfig = "am62x_evm_r5_defconfig,am62xsip_sk_r5.config"
++    uboot_a53_defconfig = "am62x_evm_a53_defconfig"
++
++[am64xx-evm]
++    # u-boot config
++    atf_target_board = "lite"
++    atf_make_args="K3_PM_SYSTEM_SUSPEND=1"
++    optee_platform = "k3-am64x"
++    optee_make_args = "."
++    uboot_r5_defconfig = "am64x_evm_r5_defconfig"
++    uboot_a53_defconfig = "am64x_evm_a53_defconfig"
++
++[j7200-evm]
++    # u-boot config
++    atf_target_board = "generic"
++    atf_make_args="K3_PM_SYSTEM_SUSPEND=1"
++    optee_platform = "k3-j721e"
++    optee_make_args = "ta-targets=ta_arm64"
++    uboot_r5_defconfig = "j7200_evm_r5_defconfig"
++    uboot_a72_defconfig = "j7200_evm_a72_defconfig"
+diff --git a/create-sdcard.sh b/create-sdcard.sh
+index a1b1190..8138488 100755
+--- a/create-sdcard.sh
++++ b/create-sdcard.sh
+@@ -690,8 +690,9 @@ sync
+ sync
+ sync
+ 
+-BOOTFILEPATH="$PARSEPATH/tisdk-debian-${build}-boot.tar.xz"
+-ROOTFILEPATH="$PARSEPATH/tisdk-debian-${build}-rootfs.tar.xz"
++BOOTFILEPATH="$PARSEPATH/tisdk-debian-${build}*-boot.tar.xz"
++# ROOTFILEPATH="$PARSEPATH/tisdk-debian-${build}-rootfs.tar.xz"
++ROOTFSPATH="$PARSEPATH/tisdk-debian-${build}*-rootfs/*"
+ 
+ cat << EOM
+ ################################################################################
+@@ -710,7 +711,8 @@ echo ""
+ sync
+ 
+ echo "Copying rootfs System partition"
+-untar_progress $ROOTFILEPATH $PATH_TO_SDROOTFS
++# untar_progress $ROOTFILEPATH $PATH_TO_SDROOTFS
++rsync -aHAX $ROOTFSPATH $PATH_TO_SDROOTFS
+ 
+ echo ""
+ echo ""
+diff --git a/scripts/build_bsp.sh b/scripts/build_bsp.sh
+index a85abe5..96ab051 100755
+--- a/scripts/build_bsp.sh
++++ b/scripts/build_bsp.sh
+@@ -5,6 +5,15 @@ build=$1
+ machine=$2
+ bsp_version=$3
+ 
++    if [ "$build" = "bookworm-am64xx-evm" ]; then
++        ARM_A_CORE=a53
++    elif [ "$build" = "bookworm-j7200-evm" ]; then
++        ARM_A_CORE=a72
++    else
++        echo "=== E: $0: Unexpected build platform ($build)"
++        exit 1
++    fi
++
+     setup_bsp_build ${build} ${machine} ${bsp_version}
+     build_atf $machine ${bsp_version}
+     build_optee $machine ${bsp_version}
+@@ -131,9 +140,9 @@ bsp_version=$2
+ 
+     uboot_r5_defconfig=($(read_machine_config ${machine} uboot_r5_defconfig ${bsp_version}))
+     uboot_r5_defconfig=`echo $uboot_r5_defconfig | tr ',' ' '`
+-    uboot_a53_defconfig=($(read_machine_config ${machine} uboot_a53_defconfig ${bsp_version}))
++    uboot_acore_defconfig=($(read_machine_config ${machine} uboot_${ARM_A_CORE}_defconfig ${bsp_version}))
+ 
+-    tiboot3_core_dir="a53"
++    tiboot3_core_dir="${ARM_A_CORE}"
+     if [ ! -z "${uboot_r5_defconfig}" ] ; then
+         cd ${UBOOT_DIR}
+         log "> uboot-r5: building .."
+@@ -144,17 +153,17 @@ bsp_version=$2
+     fi
+ 
+     cd ${UBOOT_DIR}
+-    log "> uboot-a53: building .."
++    log "> uboot-${ARM_A_CORE}: building .."
+     bl1_path=""
+     if [[ ${machine} == "am62lxx-evm" ]] ; then
+         bl1_path="BL1=${TFA_DIR}/build/k3/am62l/release/bl1.bin"
+         echo "${bl1_path}"
+     fi
+-    make -j`nproc` ARCH=arm CROSS_COMPILE=${cross_compile} ${uboot_a53_defconfig} O=${UBOOT_DIR}/out/a53 &>>"${LOG_FILE}"
+-    make -j`nproc` ARCH=arm CROSS_COMPILE=${cross_compile} BL31=${TFA_DIR}/build/k3/${target_board}/release/bl31.bin ${bl1_path} TEE=${OPTEE_DIR}/out/arm-plat-k3/core/tee-pager_v2.bin O=${UBOOT_DIR}/out/a53 BINMAN_INDIRS=${topdir}/build/${build}/bsp_sources/ti-linux-firmware &>>"${LOG_FILE}"
+-    cp ${UBOOT_DIR}/out/a53/tispl.bin ${topdir}/build/${build}/tisdk-debian-${distro}-${bsp_version}-boot/ &>> ${LOG_FILE}
++    make -j`nproc` ARCH=arm CROSS_COMPILE=${cross_compile} ${uboot_acore_defconfig} O=${UBOOT_DIR}/out/${ARM_A_CORE} &>>"${LOG_FILE}"
++    make -j`nproc` ARCH=arm CROSS_COMPILE=${cross_compile} BL31=${TFA_DIR}/build/k3/${target_board}/release/bl31.bin ${bl1_path} TEE=${OPTEE_DIR}/out/arm-plat-k3/core/tee-pager_v2.bin BINMAN_INDIRS=${FW_DIR} O=${UBOOT_DIR}/out/${ARM_A_CORE} &>>"${LOG_FILE}"
++    cp ${UBOOT_DIR}/out/${ARM_A_CORE}/tispl.bin ${topdir}/build/${build}/tisdk-debian-${distro}-${bsp_version}-boot/ &>> ${LOG_FILE}
+     cp ${UBOOT_DIR}/out/${tiboot3_core_dir}/tiboot3.bin ${topdir}/build/${build}/tisdk-debian-${distro}-${bsp_version}-boot/ &>> ${LOG_FILE}
+-    cp ${UBOOT_DIR}/out/a53/u-boot.img ${topdir}/build/${build}/tisdk-debian-${distro}-${bsp_version}-boot/ &>> ${LOG_FILE}
++    cp ${UBOOT_DIR}/out/${ARM_A_CORE}/u-boot.img ${topdir}/build/${build}/tisdk-debian-${distro}-${bsp_version}-boot/ &>> ${LOG_FILE}
+ 
+ 	case ${machine} in
+ 		am62pxx-evm | am62xx-evm | am62xx-lp-evm | am62xxsip-evm)
+diff --git a/scripts/build_distro.sh b/scripts/build_distro.sh
+index d18c78d..a647c65 100755
+--- a/scripts/build_distro.sh
++++ b/scripts/build_distro.sh
+@@ -8,20 +8,31 @@ distro_codename=$2
+ machine=$3
+ bsp_version=$4
+ 
+-    cd ${topdir}
+-
+-    log "> Building rootfs .."
+-    bdebstrap \
+-        -c ${topdir}/configs/bdebstrap_configs/${distro_codename}/${distro}.yaml \
+-        --name ${topdir}/build/${distro} \
+-        --target tisdk-debian-${distro}-${bsp_version}-rootfs \
+-        --hostname ${machine} \
+-        -f \
+-        &>>"${LOG_FILE}"
+-
+-    cd ${topdir}/build/
+-
+-    ROOTFS_DIR=${topdir}/build/${distro}/tisdk-debian-${distro}}-rootfs
++    if true; then
++        fs_dir=$(dirname ${topdir})/build/fs
++
++        mkdir -p ${topdir}/build/${distro}
++        cd ${topdir}/build/${distro}
++
++        log "> Copying rootfs .."
++        rm -rf tisdk-debian-${distro}-rootfs/
++        cp -r -p ${fs_dir} tisdk-debian-${distro}-${bsp_version}-rootfs/
++    else
++        cd ${topdir}
++
++        log "> Building rootfs .."
++        bdebstrap \
++            -c ${topdir}/configs/bdebstrap_configs/${distro_codename}/${distro}.yaml \
++            --name ${topdir}/build/${distro} \
++            --target tisdk-debian-${distro}-${bsp_version}-rootfs \
++            --hostname ${machine} \
++            -f \
++            &>>"${LOG_FILE}"
++
++        cd ${topdir}/build/
++    fi
++
++    ROOTFS_DIR=${topdir}/build/${distro}/tisdk-debian-${distro}-${bsp_version}-rootfs
+ }
+ 
+ function package_and_clean() {
+@@ -32,16 +43,19 @@ bsp_version=$2
+ 
+     log "> Cleaning up ${build}"
+     tar --use-compress-program="pigz --best --recursive | pv" -cf tisdk-debian-${distro}-${bsp_version}-rootfs.tar.xz tisdk-debian-${distro}-${bsp_version}-rootfs &>>"${LOG_FILE}"
+-    rm -rf tisdk-debian-${distro}-rootfs
++#    If we tar file system, it cause to be missing special file capabilities. (by Dennis Kong).
++#    So we will not tar it and copy the folder to SD card directly (Inside "create-sdcard.sh")
++#    refer to commit 351c0c1cbc1189fb659295251674e51799dd8be4 on git (git@github.com:psleng/ti-bdebstrap.git)
++#    rm -rf tisdk-debian-${distro}-${bsp_version}-rootfs
+ 
+     tar --use-compress-program="pigz --best --recursive | pv" -cf tisdk-debian-${distro}-${bsp_version}-boot.tar.xz tisdk-debian-${distro}-${bsp_version}-boot &>>"${LOG_FILE}"
+     rm -rf tisdk-debian-${distro}-${bsp_version}-boot
+ 
+-    rm -rf bsp_sources
++#    rm -rf bsp_sources
+ 
+-    cd ${topdir}/build/
++#    cd ${topdir}/build/
+ 
+-    log "> Packaging ${build}"
+-    tar --use-compress-program="pigz --best --recursive | pv" -cf ${distro}-${bsp_version}.tar.xz ${build} &>>"${LOG_FILE}"
++#    log "> Packaging ${build}"
++#    tar --use-compress-program="pigz --best --recursive | pv" -cf ${distro}-${bsp_version}.tar.xz ${build} &>>"${LOG_FILE}"
+ }
+ 

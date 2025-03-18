@@ -59,6 +59,12 @@ else
 fi
 log_notice "+==================================================+"
 
+if [[ -z $1 ]]; then
+    echo "E: Missing 1st argument. ex> $0 <target platform>"
+    exit -1
+else
+    TARGET_PLATFORM="$1"
+fi
 
 if $READ_SUDO_PIN; then
     RETRY=3
@@ -88,6 +94,7 @@ if [ -z $SUDO_PIN ]; then
 fi
 
 echo "========================================"
+echo "I: TARGET_PLATFORM  : $TARGET_PLATFORM"
 echo "I: VYOS_BUILD_DIR   : $VYOS_BUILD_DIR"
 echo "I: PATCH_DIR        : $PATCH_DIR"
 echo "I: START Building   : $(date)"
@@ -98,8 +105,8 @@ echo ""
 echo "I: Building BSP Images"
 cd $VYOS_BUILD_DIR
 if $READ_SUDO_PIN; then
-    ./build-am64x-boot.sh $PATCH_DIR $SUDO_PIN
+    ./build-ti-boot.sh $TARGET_PLATFORM $PATCH_DIR $SUDO_PIN
 else
-    ./build-am64x-boot.sh $PATCH_DIR
+    ./build-ti-boot.sh $TARGET_PLATFORM $PATCH_DIR
 fi
 Elapse_Time "BSP Image build time" $TIME_START

@@ -11,6 +11,11 @@ C_MAGENTA=$(tput setaf 5) #"\e[35m"
 C_CYAN=$(tput setaf 6) #"\e[36m"
 C_WHITE=$(tput setaf 7)
 
+PLATFORM=(
+    "bookworm-am64xx-evm"
+    "bookworm-j7200-evm"
+)
+
 # As we run this script in docker environment, we don't need sudo password
 READ_SUDO_PIN=false
 
@@ -22,38 +27,38 @@ PATCH_DIR=${CWD}/patches
 set -e
 
 packages=(
-    "aws-gwlbtun"
-    "ddclient"
-#    "dropbear"
     "ethtool"
+    "telegraf"
+    "owamp"
+#    "net-snmp"
     "frr"
     "frr_exporter"
+    "strongswan"
+    "openvpn-otp"
+    "aws-gwlbtun"
+    "node_exporter"
     "blackbox_exporter"
+    "podman"
+    "ddclient"
+#    "dropbear"
 #    "hostap"
-#    "hsflowd"
-    "isc-dhcp"
 #    "kea"
 #    "keepalived"
-#    "ndppd"
 #    "netfilter"
-#    "net-snmp"
-    "node_exporter"
-#    "opennhrp"
-    "openvpn-otp"
-    "owamp"
-#    "pam_tacplus"
 #    "pmacct"
-    "podman"
-#    "pyhumps"
 #    "radvd"
-    "strongswan"
-    "telegraf"
+    "isc-dhcp"
+#    "ndppd"
+#    "hsflowd"
+#    "pyhumps"
+#    "opennhrp"
+#    "pam_tacplus"
     "vpp"
     "vyos-1x"
     "vyos"
 #    "waagent"
 #    "wide-dhcpv6"
-    "xen-guest-agent"
+#    "xen-guest-agent"
     "linux-kernel"
     "debian-ti"
     "mwifiex"
@@ -97,23 +102,6 @@ function Elapse_Time() {
     TIME_START=$END_TIME
 }
 
-function recursive_copy_file_folder() {
-    local SRC=$1
-    local DST=$2
-    for FILE in `ls $SRC`
-    do
-        if [ -d $SRC/$FILE ]; then
-            # echo "$FILE is a directory. Making $DST/$FILE"
-            mkdir -p $DST/$FILE
-            recursive_copy_file_folder $SRC/$FILE $DST/$FILE
-        else
-            # echo "$FILE is not a directory(file?). Copying to $DST/$FILE"
-            # echo "  Copying $SRC/$FILE to $DST/$FILE"
-            cp -av $SRC/$FILE $DST/$FILE
-        fi
-    done
-}
-
 log_notice "+=================================================+"
 log_notice "THIS SCRIPT SHOULD BE RUN$C_RED INSIDE$C_CYAN A DOCKER CONTAINER"
 log_notice "+=================================================+"
@@ -127,7 +115,42 @@ if $READ_SUDO_PIN; then
     #echo "SUDO_PIN = $SUDO_PIN"
 fi
 
+if [[ -z $1 ]]; then
+    echo "E: Missing argument. ex> $0 <target platform>"
+    echo "Current supported platforms are:"
+    for i in "${PLATFORM[@]}";
+    do
+        echo "    $i"
+    done
+    echo ""
+    exit 1
+#    echo "Setting default target: ${PLATFORM[0]}"
+#    TARGET=${PLATFORM[0]}
+else
+    TARGET=$1
+fi
+
+for i in "${PLATFORM[@]}";
+do
+    platform_err=1
+    if [ ${TARGET} = "$i" ]; then
+        platform_err=0
+        break;
+    fi
+done
+if [ "$platform_err" = 1 ]; then
+    echo "error: Unexpected target platform (${TARGET})"
+    echo "Current supported platforms are:"
+    for i in "${PLATFORM[@]}";
+    do
+        echo "    $i"
+    done
+    echo ""
+    exit 1
+fi
+
 echo "========================================"
+echo "I: TARGET_PLATFORM  : $TARGET"
 echo "I: BUILD_BY         : $BUILD_BY"
 echo "I: VYOS_BUILD_DIR   : $VYOS_BUILD_DIR"
 echo "I: VYOS_PACKAGE_DIR : $VYOS_PKG_DIR"
@@ -142,7 +165,7 @@ if [ ! -d $VYOS_BUILD_DIR ]; then
     git clone https://github.com/vyos/vyos-build.git -b current $VYOS_BUILD_DIR
 
     if true; then
-        recursive_copy_file_folder ${PATCH_DIR}/$VYOS_BUILD_DIR/updates ${CWD}/${VYOS_BUILD_DIR}/
+        cp -a ${PATCH_DIR}/$VYOS_BUILD_DIR/updates/* ${CWD}/${VYOS_BUILD_DIR}/
 
         cd ${CWD}/${VYOS_BUILD_DIR}
         VYOS_BUILD_PATCH=$PATCH_DIR/$VYOS_BUILD_DIR/patches
@@ -161,7 +184,7 @@ if true; then
     cd ${CWD}/${VYOS_BUILD_DIR}
     echo ""
     echo "I: Builing VyOS Packages"
-    recursive_copy_file_folder ${PATCH_DIR}/linux-kernel ${CWD}/${VYOS_BUILD_DIR}/${VYOS_PKG_DIR}/linux-kernel
+    cp -a ${PATCH_DIR}/linux-kernel/${TARGET}/* ${CWD}/${VYOS_BUILD_DIR}/${VYOS_PKG_DIR}/linux-kernel
     for package in "${packages[@]}"
     do
         echo ""
@@ -189,6 +212,6 @@ if true; then
         cd ${CWD}
         echo ""
         echo "I: Build TI boot loader and file systems"
-        ./ti-bsp-image.sh
+        ./ti-bsp-image.sh ${TARGET}
     fi
 fi

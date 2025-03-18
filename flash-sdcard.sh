@@ -11,7 +11,11 @@ C_MAGENTA=$(tput setaf 5) #"\e[35m"
 C_CYAN=$(tput setaf 6) #"\e[36m"
 C_WHITE=$(tput setaf 7)
 
-TARGET_NAME=bookworm-am64xx-evm
+PLATFORM=(
+    "bookworm-am64xx-evm"
+    "bookworm-j7200-evm"
+)
+
 TI_PATH=vyos-build/ti-bdebstrap
 
 set -e
@@ -51,6 +55,40 @@ function Elapse_Time() {
 log_notice "+==================================================+"
 log_notice "THIS SCRIPT SHOULD BE RUN$C_RED OUTSIDE$C_CYAN A DOCKER CONTAINER"
 log_notice "+==================================================+"
+
+if [[ -z $1 ]]; then
+    echo "E: Missing argument. ex> $0 <target platform>"
+    echo "Current supported platforms are:"
+    for i in "${PLATFORM[@]}";
+    do
+        echo "    $i"
+    done
+    echo ""
+    exit 1
+#    echo "Setting default target: ${PLATFORM[0]}"
+#    TARGET_NAME=${PLATFORM[0]}
+else
+    TARGET_NAME=$1
+fi
+
+for i in "${PLATFORM[@]}";
+do
+    platform_err=1
+    if [ ${TARGET_NAME} = "$i" ]; then
+        platform_err=0
+        break;
+    fi
+done
+if [ "$platform_err" = 1 ]; then
+    echo "error: Unexpected target platform (${TARGET_NAME})"
+    echo "Current supported platforms are:"
+    for i in "${PLATFORM[@]}";
+    do
+        echo "    $i"
+    done
+    echo ""
+    exit 1
+fi
 
 echo "========================================"
 echo "I: TARGET_NAME      : $TARGET_NAME"

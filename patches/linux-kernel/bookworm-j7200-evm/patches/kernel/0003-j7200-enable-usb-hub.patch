@@ -1,0 +1,17 @@
+diff --git a/arch/arm64/boot/dts/ti/k3-j7200-som-p0.dtsi b/arch/arm64/boot/dts/ti/k3-j7200-som-p0.dtsi
+index 5a300d4c8ba0..7d69083a889e 100644
+--- a/arch/arm64/boot/dts/ti/k3-j7200-som-p0.dtsi
++++ b/arch/arm64/boot/dts/ti/k3-j7200-som-p0.dtsi
+@@ -251,6 +251,12 @@ exp_som: gpio@21 {
+ 				  "CANUART_MUX2_SEL0", "CANUART_MUX_SEL1",
+ 				  "UART/LIN_MUX_SEL", "TRC_D17/AUDIO_REFCLK_SEL",
+ 				  "GPIO_LIN_EN", "CAN_STB";
++		gtr-sel0-hog {
++			gpio-hog;
++			gpios = <0 0>;
++			output-high; /* USBC = 0, USB HUB = 1 */
++			line-name = "usb_hub";
++		};
+ 	};
+ };
+ 

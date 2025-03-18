@@ -1,22 +1,28 @@
 #!/bin/bash
 CWD=$(pwd)
 
-TARGET_NAME=bookworm-am64xx-evm
-
 set -e
+
+# argument1 => target platform
+if [[ -z $1 ]]; then
+    echo "E: Missing 1st arguments. ex> $0 <target platform> <patch dir> <sudo password>"
+    exit -1
+else
+    TARGET_NAME="$1"
+fi
 
 # argument1 => patches folder
 if [[ -z $1 ]]; then
-    echo "E: Missing 1st arguments. ex> $0 <patch dir> <sudo password>"
+    echo "E: Missing 2nd arguments. ex> $0 <target platform> <patch dir> <sudo password>"
     exit -1
 else
-    PATCH_DIR="$1"
+    PATCH_DIR="$2"
 fi
 
 if [[ -z $2 ]]; then
-    echo "W: Missing 2nd arguments. ex> $0 <patch dir> <sudo password>"
+    echo "W: Missing 3rd arguments. ex> $0 <target platform> <patch dir> <sudo password>"
 else
-    SUDO_PIN="$2"
+    SUDO_PIN="$3"
 fi
 
 TI_BDEB_PATCH=${PATCH_DIR}/ti_bdebstrap
@@ -33,10 +39,13 @@ if [ ! -d $SRC ]; then
 #    git checkout XXX
     cd $SRC
 
-    for patch in $(ls ${TI_BDEB_PATCH})
+    cp -a ${TI_BDEB_PATCH}/updates/* .
+
+    PATCH_DIR=${TI_BDEB_PATCH}/patches
+    for patch in $(ls ${PATCH_DIR})
     do
-        echo "I: Apply patch: ${TI_BDEB_PATCH}/${patch}"
-        patch -p1 < ${TI_BDEB_PATCH}/${patch}
+        echo "I: Apply patch: ${PATCH_DIR}/${patch}"
+        patch -p1 < ${PATCH_DIR}/${patch}
     done
 else
     cd $SRC

@@ -3,23 +3,6 @@
 set -e
 ROOTDIR=$(pwd)
 
-function recursive_copy_file_folder() {
-    local SRC=$1
-    local DST=$2
-    for FILE in `ls $SRC`
-    do
-        if [ -d $SRC/$FILE ]; then
-            # echo "$FILE is a directory. Making $DST/$FILE"
-            mkdir -p $DST/$FILE
-            recursive_copy_file_folder $SRC/$FILE $DST/$FILE
-        else
-            # echo "$FILE is not a directory(file?). Copying to $DST/$FILE"
-            # echo "  Copying $SRC/$FILE to $DST/$FILE"
-            cp -av $SRC/$FILE $DST/$FILE
-        fi
-    done
-}
-
 # argument1 => Build-by
 if [[ -z $1 ]]; then
     echo "Missing 1st arguments. ex> $0 <build-by> <patch dir>"
@@ -62,7 +45,7 @@ cp -R build/fs/usr/lib/linux-image*/ti build/fs/boot/dtb
 cat build/fs/boot/vmlinuz* | sh -c 'gunzip -d > build/fs/boot/Image'
 
 echo "Copy new default configuration to the vyos image"
-recursive_copy_file_folder ${PATCH_DIR}/fs ${ROOTDIR}/build/fs
+cp -a ${PATCH_DIR}/fs/* ${ROOTDIR}/build/fs
 #cp -Rf ${PATCH_DIR}/fs/* ${ROOTDIR}/build/fs/
 #cp -rf ${PATCH_DIR}/fs/usr/share/vyos/config.boot.default ${ROOTDIR}/build/fs/usr/share/vyos/config.boot.default
 #cp -rf ${PATCH_DIR}/fs/usr/libexec/vyos/conf_mode/system_console.py ${ROOTDIR}/build/fs/usr/libexec/vyos/conf_mode

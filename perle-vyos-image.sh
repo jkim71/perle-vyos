@@ -165,7 +165,7 @@ if [ ! -d $VYOS_BUILD_DIR ]; then
     git clone https://github.com/vyos/vyos-build.git -b current $VYOS_BUILD_DIR
 
     if true; then
-        cp -a ${PATCH_DIR}/$VYOS_BUILD_DIR/updates/* ${CWD}/${VYOS_BUILD_DIR}/
+        cp -av ${PATCH_DIR}/$VYOS_BUILD_DIR/updates/* ${CWD}/${VYOS_BUILD_DIR}/
 
         cd ${CWD}/${VYOS_BUILD_DIR}
         VYOS_BUILD_PATCH=$PATCH_DIR/$VYOS_BUILD_DIR/patches
@@ -184,7 +184,7 @@ if true; then
     cd ${CWD}/${VYOS_BUILD_DIR}
     echo ""
     echo "I: Builing VyOS Packages"
-    cp -a ${PATCH_DIR}/linux-kernel/${TARGET}/* ${CWD}/${VYOS_BUILD_DIR}/${VYOS_PKG_DIR}/linux-kernel
+    cp -av ${PATCH_DIR}/linux-kernel/${TARGET}/* ${CWD}/${VYOS_BUILD_DIR}/${VYOS_PKG_DIR}/linux-kernel
     for package in "${packages[@]}"
     do
         echo ""

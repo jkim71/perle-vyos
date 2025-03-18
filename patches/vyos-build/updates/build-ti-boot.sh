@@ -39,7 +39,7 @@ if [ ! -d $SRC ]; then
 #    git checkout XXX
     cd $SRC
 
-    cp -a ${TI_BDEB_PATCH}/updates/* .
+    cp -av ${TI_BDEB_PATCH}/updates/* .
 
     PATCH_DIR=${TI_BDEB_PATCH}/patches
     for patch in $(ls ${PATCH_DIR})

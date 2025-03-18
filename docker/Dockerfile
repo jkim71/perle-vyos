@@ -108,6 +108,7 @@ RUN apt-get update && apt-get install -y \
       debootstrap \
       live-build \
       gdisk \
+      sbsigntool \
       dosfstools
 
 # Packages for TPM test
@@ -137,10 +138,7 @@ RUN dpkg-reconfigure ca-certificates; \
 # Installing OCAML needed to compile libvyosconfig
 RUN curl https://raw.githubusercontent.com/ocaml/opam/master/shell/install.sh \
       --output /tmp/opam_install.sh --retry 10 --retry-delay 5 && \
-    sed -i -e 's/read_tty BINDIR$/BINDIR=""/' \
-           -e 's/read_tty R$/R=""/' \
-                /tmp/opam_install.sh && \
-    sh /tmp/opam_install.sh && \
+    sed -i 's/read_tty BINDIR/BINDIR=""/' /tmp/opam_install.sh && sh /tmp/opam_install.sh && \
     opam init --root=/opt/opam --comp=${OCAML_VERSION} --disable-sandboxing --no-setup
 
 RUN eval $(opam env --root=/opt/opam --set-root) && \
@@ -161,13 +159,6 @@ RUN apt-get update && apt-get install -y \
       quilt \
       libpcre3-dev \
       libffi-dev
-
-# Build libvyosconfig
-RUN eval $(opam env --root=/opt/opam --set-root) && \
-    git clone https://github.com/vyos/libvyosconfig.git /tmp/libvyosconfig && \
-    cd /tmp/libvyosconfig && git checkout 677d1e2bf8109b9fd4da60e20376f992b747e384 && \
-    dpkg-buildpackage -uc -us -tc -b && \
-    dpkg -i /tmp/libvyosconfig0_*_$(dpkg-architecture -qDEB_HOST_ARCH).deb
 
 # Packages needed for open-vmdk
 RUN apt-get update && apt-get install -y \
@@ -267,7 +258,8 @@ RUN pip install --break-system-packages \
       python3-zmq \
       pylint \
       quilt \
-      whois
+      whois \
+      python3-cracklib
 
 # Go required for telegraf and prometheus exporters build
 RUN GO_VERSION_INSTALL="1.23.2" ; \
@@ -374,38 +366,38 @@ RUN apt-get update && apt-get install -y \
 
 # Packages needed for Strongswan - JF
 RUN apt-get update && apt-get install -y \
-	bison \
-	bzip2 \
-	debhelper-compat \
-	dh-apparmor \
-	dpkg-dev  \
-	flex \
-	gperf \
-	libiptc-dev \
-	libcap-dev \
-	libcurl3-dev \
-	libgcrypt20-dev \
-	libgmp3-dev \
-	libkrb5-dev \
-	libldap2-dev \
-	libnm-dev \
-	libpam0g-dev \
-	libsqlite3-dev \
-	libssl-dev \
-	libtool \
-	libtss2-dev \
-	libxml2-dev \
-	pkg-config \
-	po-debconf \
-	systemd \
-	tzdata \
-	libcurl4-openssl-dev \
-	libgmp3-dev \
-	libldap2-dev \
-	libpam0g-dev \
-	libsqlite3-dev \
-	libsystemd-dev \
-	systemd
+      bison \
+      bzip2 \
+      debhelper-compat \
+      dh-apparmor \
+      dpkg-dev  \
+      flex \
+      gperf \
+      libiptc-dev \
+      libcap-dev \
+      libcurl3-dev \
+      libgcrypt20-dev \
+      libgmp3-dev \
+      libkrb5-dev \
+      libldap2-dev \
+      libnm-dev \
+      libpam0g-dev \
+      libsqlite3-dev \
+      libssl-dev \
+      libtool \
+      libtss2-dev \
+      libxml2-dev \
+      pkg-config \
+      po-debconf \
+      systemd \
+      tzdata \
+      libcurl4-openssl-dev \
+      libgmp3-dev \
+      libldap2-dev \
+      libpam0g-dev \
+      libsqlite3-dev \
+      libsystemd-dev \
+      systemd
 
 # Packages needed for failed make of Vyos - JF
 RUN apt-get update && apt-get install -y \
@@ -444,7 +436,7 @@ RUN apt-get update && apt-get install -y \
 # Packages needed for net-snmp - DK
 RUN apt-get update && apt-get install -y \
 	perl-xs-dev \
-	default-libmysqlclient-dev
+      default-libmysqlclient-dev
 
 # Packages needed for keepalived
 RUN apt-get install -y \
@@ -478,7 +470,7 @@ RUN sed "s/^%sudo.*/%sudo\tALL=(ALL) NOPASSWD:ALL/g" -i /etc/sudoers && \
     chmod a+s /usr/sbin/useradd /usr/sbin/groupadd
 
 # Ensure sure all users have access to our OCAM and Go installation
-RUN echo "$(opam env --root=/opt/opam --set-root)" >> /etc/skel/.bashrc && \
+RUN echo "eval \$(opam env --root=/opt/opam --set-root)" >> /etc/skel/.bashrc && \
     echo "export PATH=/opt/go/bin:\$PATH" >> /etc/skel/.bashrc
 
 # Rise upper limit for UID when working in an Active Direcotry integrated

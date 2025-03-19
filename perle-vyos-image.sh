@@ -102,9 +102,21 @@ function Elapse_Time() {
     TIME_START=$END_TIME
 }
 
-log_notice "+=================================================+"
-log_notice "THIS SCRIPT SHOULD BE RUN$C_RED INSIDE$C_CYAN A DOCKER CONTAINER"
-log_notice "+=================================================+"
+while [ $# -gt 0 ]; do
+  arg=$1
+  case $arg in
+    lists)
+        for i in "${PLATFORM[@]}";
+        do
+            echo "$i "
+        done
+        exit
+    ;;
+    *)
+    ;;
+  esac
+  shift
+done
 
 if $READ_SUDO_PIN; then
     read -s -p "Enter Password for sudo: " SUDO_PIN
@@ -148,6 +160,10 @@ if [ "$platform_err" = 1 ]; then
     echo ""
     exit 1
 fi
+
+log_notice "+=================================================+"
+log_notice "THIS SCRIPT SHOULD BE RUN$C_RED INSIDE$C_CYAN A DOCKER CONTAINER"
+log_notice "+=================================================+"
 
 echo "========================================"
 echo "I: TARGET_PLATFORM  : $TARGET"

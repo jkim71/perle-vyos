@@ -52,10 +52,6 @@ function Elapse_Time() {
 #    exit 1
 #fi
 
-log_notice "+==================================================+"
-log_notice "THIS SCRIPT SHOULD BE RUN$C_RED OUTSIDE$C_CYAN A DOCKER CONTAINER"
-log_notice "+==================================================+"
-
 if [[ -z $1 ]]; then
     echo "E: Missing argument. ex> $0 <target platform>"
     echo "Current supported platforms are:"
@@ -89,6 +85,10 @@ if [ "$platform_err" = 1 ]; then
     echo ""
     exit 1
 fi
+
+log_notice "+==================================================+"
+log_notice "THIS SCRIPT SHOULD BE RUN$C_RED OUTSIDE$C_CYAN A DOCKER CONTAINER"
+log_notice "+==================================================+"
 
 echo "========================================"
 echo "I: TARGET_NAME      : $TARGET_NAME"

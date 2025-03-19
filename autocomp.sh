@@ -1,6 +1,6 @@
 _script()
 {
-  _script_commands=$(./perle-vyos-image.sh lists)
+  _script_commands=$(./platform.sh lists)
 
   local cur
   COMPREPLY=()

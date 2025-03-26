@@ -22,3 +22,4 @@ sudo DEB_SUITE=${DEB_SUITE} ./run.sh ti-linux-firmware
 
 echo "I: Copy deb files..."
 cp -rvf build/${DEB_SUITE}/ti-linux-firmware/*j7200*.deb ..
+cp -rvf build/${DEB_SUITE}/ti-linux-firmware/*64*.deb ..

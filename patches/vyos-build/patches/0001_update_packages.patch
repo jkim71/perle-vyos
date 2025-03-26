@@ -1,12 +1,12 @@
 diff --git a/.gitignore b/.gitignore
-index e3724a9f..7d754e13 100644
+index 6de027c6..ab9e633b 100644
 --- a/.gitignore
 +++ b/.gitignore
-@@ -4,7 +4,6 @@ packer_build/*
+@@ -6,7 +6,6 @@ packer_build/*
  packer_cache/*
  key/*
  packages/*
 -!packages/*/
- data/live-build-config/includes.chroot/var/lib/shim-signed/mok/*
  /testinstall*.img
  /testinstall*.efivars
+ /*.qcow2

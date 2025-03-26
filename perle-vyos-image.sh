@@ -118,6 +118,15 @@ if true; then
         echo "I: Building package $package.."
         ./build-scripts-packages.sh < /dev/null $VYOS_PKG_DIR/$package
     done
+    # better to filter at scripts/package-build/build-ti-linux-firmware.sh but this scrpit doesn't know the TARGET
+    # so, it copy both files and delete here.
+    if [ "$TARGET" = "bookworm-am64xx-evm" ]; then
+        rm -rvf ${CWD}/${VYOS_BUILD_DIR}/packages/firmware-ti*j7200*.deb
+    elif [ "$TARGET" = "bookworm-j7200-evm" ]; then
+        rm -rvf ${CWD}/${VYOS_BUILD_DIR}/packages/firmware-ti*64*.deb
+    else
+        echo "=== W: $0: Unexpected build platform ($TARGET)"
+    fi
     Elapse_Time "Package build time" $TIME_START
 fi
 

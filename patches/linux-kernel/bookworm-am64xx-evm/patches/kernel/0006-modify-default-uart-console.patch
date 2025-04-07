@@ -1,0 +1,22 @@
+diff --git a/arch/arm64/boot/dts/ti/k3-am642-evm.dts b/arch/arm64/boot/dts/ti/k3-am642-evm.dts
+index ee36cd011661..4a35297006d0 100644
+--- a/arch/arm64/boot/dts/ti/k3-am642-evm.dts
++++ b/arch/arm64/boot/dts/ti/k3-am642-evm.dts
+@@ -18,13 +18,13 @@ / {
+ 	model = "Texas Instruments AM642 EVM";
+ 
+ 	chosen {
+-		stdout-path = &main_uart1;
++		stdout-path = &main_uart0;
+ 	};
+ 
+ 	aliases {
+-		serial0 = &mcu_uart0;
+-		serial1 = &main_uart1;
+-		serial2 = &main_uart0;
++		serial0 = &main_uart0;
++		serial1 = &mcu_uart0;
++		serial2 = &main_uart1;
+ 		serial3 = &main_uart3;
+ 		i2c0 = &main_i2c0;
+ 		i2c1 = &main_i2c1;

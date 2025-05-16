@@ -41,6 +41,8 @@ packages=(
 #    "pyhumps"
 #    "opennhrp"
 #    "pam_tacplus"
+    "libnss-mapuser"
+    "libpam-radius-auth"
     "vpp"
     "vyos-1x"
     "vyos"

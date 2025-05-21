@@ -128,12 +128,12 @@ index 0000000..521cb6b
 +    - '$BDEBSTRAP_HOOKS/enable-units "$1" resize_rootfs'
 +
 diff --git a/configs/bsp_sources.toml b/configs/bsp_sources.toml
-index 22d588d..85b2179 100644
+index 70fce2d..1038549 100644
 --- a/configs/bsp_sources.toml
 +++ b/configs/bsp_sources.toml
 @@ -2,9 +2,12 @@
  [trixie]
-     bsp_version = "11.00.05.02"
+     bsp_version = "11.00.09.04"
  
 -[bookworm]
 +[bookworm-am64xx-evm]
@@ -143,8 +143,8 @@ index 22d588d..85b2179 100644
 +    bsp_version = "09.02.00.011"
 +
  # BSP Configurations
- [11.00.05.02]
-     atf_srcrev = "dd46885ec58f9394b37f0c3d957e79838999b79d"
+ [11.00.09.04]
+     atf_srcrev = "b11beb2b6bd30b75c4bfb0e9925c0e72f16ca53f"
 @@ -18,3 +21,8 @@
      uboot_srcrev = "09.02.00.010"
      linux_fw_srcrev = "09.02.00.010"
@@ -259,7 +259,7 @@ index a1b1190..8138488 100755
  echo ""
  echo ""
 diff --git a/scripts/build_bsp.sh b/scripts/build_bsp.sh
-index a85abe5..96ab051 100755
+index d7f02b6..8cac5d6 100755
 --- a/scripts/build_bsp.sh
 +++ b/scripts/build_bsp.sh
 @@ -5,6 +5,15 @@ build=$1
@@ -278,6 +278,19 @@ index a85abe5..96ab051 100755
      setup_bsp_build ${build} ${machine} ${bsp_version}
      build_atf $machine ${bsp_version}
      build_optee $machine ${bsp_version}
+@@ -62,10 +71,10 @@ bsp_version=$3
+             --single-branch \
+             --depth=1 &>>"${LOG_FILE}"
+         log ">> ti-u-boot: cloned"
+-        if [ -d ${topdir}/patches/ti-u-boot ]; then
++        if [ -d ${topdir}/patches/${build}/ti-u-boot ]; then
+             log ">> ti-u-boot: patching .."
+             cd ti-u-boot
+-            git apply ${topdir}/patches/ti-u-boot/* &>>"${LOG_FILE}"
++            git apply ${topdir}/patches/${build}/ti-u-boot/* &>>"${LOG_FILE}"
+             cd ..
+         fi
+     else
 @@ -131,9 +140,9 @@ bsp_version=$2
  
      uboot_r5_defconfig=($(read_machine_config ${machine} uboot_r5_defconfig ${bsp_version}))

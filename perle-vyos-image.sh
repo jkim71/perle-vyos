@@ -46,6 +46,7 @@ packages=(
     "vpp"
     "vyos-1x"
     "vyos"
+    "udp-broadcast-relay"
 #    "waagent"
 #    "wide-dhcpv6"
 #    "xen-guest-agent"

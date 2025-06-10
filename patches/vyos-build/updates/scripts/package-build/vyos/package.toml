@@ -38,6 +38,7 @@ scm_url = "https://github.com/vyos/vyos-http-api-tools.git"
 name = "vyos-utils"
 commit_id = "current"
 scm_url = "https://github.com/vyos/vyos-utils.git"
+build_cmd = "eval $(opam env --root=/opt/opam --set-root);dpkg-buildpackage -uc -us -tc -b"
 
 #[[packages]]
 #name = "vyatta-wanloadbalance"
@@ -48,11 +49,6 @@ scm_url = "https://github.com/vyos/vyos-utils.git"
 #name = "vyos-xe-guest-utilities"
 #commit_id = "current"
 #scm_url = "https://github.com/vyos/vyos-xe-guest-utilities.git"
-
-[[packages]]
-name = "udp-broadcast-relay"
-commit_id = "current"
-scm_url = "https://github.com/vyos/udp-broadcast-relay.git"
 
 [[packages]]
 name = "hvinfo"

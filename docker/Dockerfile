@@ -1,4 +1,4 @@
-# Copyright (C) 2018-2024 VyOS maintainers and contributors
+# Copyright (C) 2018-2025 VyOS maintainers and contributors
 #
 # This program is free software; you can redistribute it and/or modify
 # in order to easy exprort images built to "external" world
@@ -18,7 +18,7 @@
 
 # This Dockerfile is installable on both x86, x86-64, armhf and arm64 systems
 ARG ARCH=
-FROM ${ARCH}debian:bookworm
+FROM ${ARCH}debian:bookworm-slim
 
 RUN grep "VERSION_ID" /etc/os-release || (echo 'VERSION_ID="12"' >> /etc/os-release)
 
@@ -88,7 +88,8 @@ RUN apt-get update && apt-get install -y \
       po4a \
       openssh-client \
       jq \
-      socat
+      socat \
+      python-is-python3
 
 # Packages needed for vyos-build
 RUN apt-get update && apt-get install -y \
@@ -109,7 +110,8 @@ RUN apt-get update && apt-get install -y \
       live-build \
       gdisk \
       sbsigntool \
-      dosfstools
+      dosfstools \
+      kpartx
 
 # Packages for TPM test
 RUN apt-get update && apt-get install -y swtpm
@@ -123,9 +125,10 @@ RUN if dpkg-architecture -ii386 || dpkg-architecture -iamd64; then \
 
 # Building libvyosconf requires a full configured OPAM/OCaml setup
 RUN apt-get update && apt-get install -y \
+      quilt \
       debhelper \
       libffi-dev \
-      libpcre3-dev \
+      libpcre2-dev \
       unzip
 
 # Update certificate store to not crash ocaml package install
@@ -135,17 +138,15 @@ RUN dpkg-reconfigure ca-certificates; \
       echo "cacert=/etc/ssl/certs/ca-certificates.crt" >> ~/.curlrc; \
     fi
 
-# Installing OCAML needed to compile libvyosconfig
+# Installing OCaml needed to compile libvyosconfig
 RUN curl https://raw.githubusercontent.com/ocaml/opam/master/shell/install.sh \
       --output /tmp/opam_install.sh --retry 10 --retry-delay 5 && \
     sed -i 's/read_tty BINDIR/BINDIR=""/' /tmp/opam_install.sh && sh /tmp/opam_install.sh && \
     opam init --root=/opt/opam --comp=${OCAML_VERSION} --disable-sandboxing --no-setup
 
-RUN eval $(opam env --root=/opt/opam --set-root) && \
-    opam pin add pcre https://github.com/mmottl/pcre-ocaml.git#0c4ca03a -y
-
 RUN eval $(opam env --root=/opt/opam --set-root) && opam install -y \
       re \
+      pcre2 \
       num \
       ctypes \
       ctypes-foreign \
@@ -153,12 +154,6 @@ RUN eval $(opam env --root=/opt/opam --set-root) && opam install -y \
       containers \
       fileutils \
       xml-light
-
-# Packages needed for libvyosconfig
-RUN apt-get update && apt-get install -y \
-      quilt \
-      libpcre3-dev \
-      libffi-dev
 
 # Packages needed for open-vmdk
 RUN apt-get update && apt-get install -y \
@@ -197,34 +192,7 @@ RUN wget https://salsa.debian.org/klausenbusk-guest/debootstrap/commit/a9a603b17
     dpkg-buildpackage -us -uc && \
     sudo dpkg -i ../debootstrap*.deb
 
-# Packages needed for Linux Kernel
-# cmake required by accel-ppp
-RUN apt-get update && apt-get install -y \
-      cmake \
-      gnupg2 \
-      rsync \
-      libelf-dev \
-      libncurses5-dev \
-      flex \
-      bison \
-      bc \
-      kmod \
-      cpio \
-      python-is-python3 \
-      dwarves \
-      nasm \
-      rdfind
-
-# Packages needed for Intel QAT out-of-tree drivers
 # FPM is used when generation Debian pckages for e.g. Intel QAT drivers
-RUN apt-get update && apt-get install -y \
-      pciutils \
-      yasm \
-      ruby \
-      libudev-dev \
-      ruby-dev \
-      rubygems \
-      build-essential
 RUN gem install --no-document fpm
 
 # Packages needed for vyos-1x
@@ -232,11 +200,13 @@ RUN pip install --break-system-packages \
       git+https://github.com/aristanetworks/j2lint.git@341b5d5db86 \
       pyhumps==3.8.0; \
     apt-get update && apt-get install -y \
+      build-essential \
       dh-python \
       fakeroot \
       iproute2 \
       libzmq3-dev \
       procps \
+      protobuf-compiler \
       python3 \
       python3-setuptools \
       python3-inotify \
@@ -254,6 +224,7 @@ RUN pip install --break-system-packages \
       python3-netaddr \
       python3-paramiko \
       python3-passlib \
+      python3-protobuf \
       python3-tabulate \
       python3-zmq \
       pylint \
@@ -262,9 +233,13 @@ RUN pip install --break-system-packages \
       python3-cracklib
 
 # Go required for telegraf and prometheus exporters build
-RUN GO_VERSION_INSTALL="1.23.2" ; \
-    wget -O /tmp/go${GO_VERSION_INSTALL}.linux-amd64.tar.gz https://go.dev/dl/go${GO_VERSION_INSTALL}.linux-$(dpkg-architecture -qDEB_HOST_ARCH).tar.gz ; \
-    tar -C /opt -xzf /tmp/go*.tar.gz && \
+ENV GO_VERSION_INSTALL="1.23.2"
+RUN if [ "$ARCH" = "arm64v8" ]; then \
+        wget -O /tmp/go${GO_VERSION_INSTALL}.linux-arm64.tar.gz https://go.dev/dl/go${GO_VERSION_INSTALL}.linux-$(dpkg-architecture -qDEB_HOST_ARCH).tar.gz ; \
+    else \
+        wget -O /tmp/go${GO_VERSION_INSTALL}.linux-amd64.tar.gz https://go.dev/dl/go${GO_VERSION_INSTALL}.linux-$(dpkg-architecture -qDEB_HOST_ARCH).tar.gz ; \
+    fi && \
+        tar -C /opt -xzf /tmp/go*.tar.gz && \
     rm /tmp/go*.tar.gz
 RUN echo "export PATH=/opt/go/bin:$PATH" >> /etc/bash.bashrc
 
@@ -283,7 +258,6 @@ RUN if dpkg-architecture -ii386 || dpkg-architecture -iamd64; then \
 # This is only supported on i386 and amd64 platforms
 RUN if dpkg-architecture -ii386 || dpkg-architecture -iamd64; then \
      apt-get update && apt-get install -y \
-      kpartx \
       parted \
       udev \
       grub-pc \
@@ -320,12 +294,6 @@ RUN if dpkg-architecture -iarm64; then \
       grub-efi-arm; \
     fi
 
-# Packages needed for openvpn-otp
-RUN apt-get update && apt-get install -y \
-      debhelper \
-      libssl-dev \
-      openvpn
-
 # Packages needed for OWAMP/TWAMP (service sla)
 RUN git clone -b 4.4.6 https://github.com/perfsonar/i2util.git /tmp/i2util && \
       cd /tmp/i2util && \
@@ -338,140 +306,23 @@ RUN apt-get update && apt-get install -y \
       udev \
       zip
 
-# Packages needed for Accel-PPP
-# XXX: please note that this must be installed after nftable dependencies - otherwise
-# APT will remove liblua5.3-dev which breaks the Accel-PPP build
-# With bookworm, updated to libssl3 (Note: https://github.com/accel-ppp/accel-ppp/issues/68)
-RUN apt-get update && apt-get install -y \
-      liblua5.3-dev \
-      libssl3 \
-      libssl-dev \
-      libpcre3-dev
-
 # debmake: a native Debian tool for preparing sources for packaging
 RUN apt-get update && apt-get install -y \
       debmake \
       python3-debian
 
-# Packages for jool
-RUN apt-get update && apt-get install -y \
-      libnl-genl-3-dev \
-      libxtables-dev
-
-# Packages needed for OWAMP - JF
-RUN apt-get update && apt-get install -y \
-      dh-apparmor \
-      dh-exec \
-      libcap-dev
-
-# Packages needed for Strongswan - JF
-RUN apt-get update && apt-get install -y \
-      bison \
-      bzip2 \
-      debhelper-compat \
-      dh-apparmor \
-      dpkg-dev  \
-      flex \
-      gperf \
-      libiptc-dev \
-      libcap-dev \
-      libcurl3-dev \
-      libgcrypt20-dev \
-      libgmp3-dev \
-      libkrb5-dev \
-      libldap2-dev \
-      libnm-dev \
-      libpam0g-dev \
-      libsqlite3-dev \
-      libssl-dev \
-      libtool \
-      libtss2-dev \
-      libxml2-dev \
-      pkg-config \
-      po-debconf \
-      systemd \
-      tzdata \
-      libcurl4-openssl-dev \
-      libgmp3-dev \
-      libldap2-dev \
-      libpam0g-dev \
-      libsqlite3-dev \
-      libsystemd-dev \
-      systemd
-
-# Packages needed for failed make of Vyos - JF
-RUN apt-get update && apt-get install -y \
-	kpartx
-	
-# Packages needed for frr - JF
-# DK	libsnmp-dev removed, it  will be installed when net-snmp is installed BEFORE frr is built - order dependency
-# And for building libyan2-dev https://docs.frrouting.org/projects/dev-guide/en/latest/building-frr-for-debian12.html#install-required-packages -JF
-RUN apt-get update && apt-get install -y \
-	chrpath \
-	gawk \
-	install-info \
-	libcap-dev \
-	libjson-c-dev \
-	librtr-dev \
-	libpam-dev \
-	libprotobuf-c-dev \
-	libpython3-dev:native \
-	python3-sphinx:native \
-	protobuf-c-compiler \
-	python3-dev:native \
-	texinfo \
-	lua5.3 \
-	autoconf \
-	automake \
-	make \
-	libreadline-dev \
-	gdb \
-	libgrpc-dev \
-	libpcre2-dev \
-	libgrpc++-dev \
-	libsqlite3-dev \
-	libzmq5 \
-	libzmq3-dev
-
-# Packages needed for net-snmp - DK
-RUN apt-get update && apt-get install -y \
-	perl-xs-dev \
-      default-libmysqlclient-dev
-
-# Packages needed for keepalived
-RUN apt-get install -y \
-    libipset-dev libnfnetlink-dev libnftnl-dev libnl-nf-3-dev libpopt-dev
-
 #Packages needed for TI Boot Environment
-RUN apt-get update && apt-get install -y \
-	pigz \
-	expect \
-	pv \
-	binfmtc \
-	binfmt-support \
-	debian-archive-keyring \
-	bdebstrap \
-	wget \
-	swig \
-	python3-pyelftools \
-	python3-cryptography
-
 RUN pip install --break-system-packages \
 	toml-cli \
 	yamllint
-
-# Packages needed for nftables
-RUN apt-get update && apt-get install -y \
-      asciidoc-base
 
 # Allow password-less 'sudo' for all users in group 'sudo'
 RUN sed "s/^%sudo.*/%sudo\tALL=(ALL) NOPASSWD:ALL/g" -i /etc/sudoers && \
     echo "vyos_bld\tALL=(ALL) NOPASSWD:ALL" >> /etc/sudoers && \
     chmod a+s /usr/sbin/useradd /usr/sbin/groupadd
 
-# Ensure sure all users have access to our OCAM and Go installation
-RUN echo "eval \$(opam env --root=/opt/opam --set-root)" >> /etc/skel/.bashrc && \
-    echo "export PATH=/opt/go/bin:\$PATH" >> /etc/skel/.bashrc
+# Ensure sure all users have access to Go
+RUN echo "export PATH=/opt/go/bin:\$PATH" >> /etc/skel/.bashrc
 
 # Rise upper limit for UID when working in an Active Direcotry integrated
 # environment. This solves the warning: vyos_bld's uid 1632000007 outside of the

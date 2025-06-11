@@ -312,6 +312,21 @@ RUN apt-get update && apt-get install -y \
       python3-debian
 
 #Packages needed for TI Boot Environment
+RUN apt-get update && apt-get install -y \
+	pigz \
+	expect \
+	pv \
+	binfmtc \
+	binfmt-support \
+	debian-archive-keyring \
+	bdebstrap \
+	wget \
+	swig \
+	libssl-dev \
+	python3-dev \
+	python3-pyelftools \
+	python3-cryptography
+
 RUN pip install --break-system-packages \
 	toml-cli \
 	yamllint

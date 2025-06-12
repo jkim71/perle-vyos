@@ -114,6 +114,7 @@ if true; then
     cd ${CWD}/${VYOS_BUILD_DIR}
     echo ""
     echo "I: Builing VyOS Packages"
+    cp -av ${PATCH_DIR}/linux-kernel/arch/* ${CWD}/${VYOS_BUILD_DIR}/${VYOS_PKG_DIR}/linux-kernel/arch
     cp -av ${PATCH_DIR}/linux-kernel/${TARGET}/* ${CWD}/${VYOS_BUILD_DIR}/${VYOS_PKG_DIR}/linux-kernel
     for package in "${packages[@]}"
     do

@@ -1,0 +1,10 @@
+[[packages]]
+name = "i2c-tools"
+commit_id = "debian/4.4-2"
+scm_url = "https://salsa.debian.org/aurel32/i2c-tools"
+
+[dependencies]
+packages = [
+    "libi2c0",
+    "libi2c-dev"
+]

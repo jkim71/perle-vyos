@@ -54,6 +54,7 @@ packages=(
     "debian-ti"
     "mwifiex"
     "libgpiod"
+    "i2c-tools"
 )
 
 #if [ "$EUID" -ne 0 ] ; then

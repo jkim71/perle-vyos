@@ -1,0 +1,24 @@
+diff --git a/arch/arm64/boot/dts/ti/k3-am642-evm.dts b/arch/arm64/boot/dts/ti/k3-am642-evm.dts
+index 6cd9c7a74c39..c6cdced95982 100644
+--- a/arch/arm64/boot/dts/ti/k3-am642-evm.dts
++++ b/arch/arm64/boot/dts/ti/k3-am642-evm.dts
+@@ -32,6 +32,7 @@ aliases {
+ 		mmc1 = &sdhci1;
+ 		ethernet0 = &cpsw_port1;
+ 		ethernet1 = &cpsw_port2;
++		rtc0 = &rtc_rv3028;
+ 	};
+ 
+ 	memory@80000000 {
+@@ -508,6 +509,11 @@ display@3c {
+ 		solomon,prechargep1 = <2>;
+ 		solomon,prechargep2 = <13>;
+ 	};
++
++	rtc_rv3028: rtc@52 {
++		compatible = "microcrystal,rv3028";
++		reg = <0x52>;
++	};
+ };
+ 
+ &main_gpio0 {

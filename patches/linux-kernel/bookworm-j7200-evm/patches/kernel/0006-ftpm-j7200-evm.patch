@@ -1,0 +1,16 @@
+--- a/arch/arm64/boot/dts/ti/k3-j7200.dtsi	2025-07-16 15:09:31.963110204 -0400
++++ b/arch/arm64/boot/dts/ti/k3-j7200.dtsi	2025-07-16 15:52:35.750519975 -0400
+@@ -93,6 +93,13 @@
+ 		};
+ 	};
+ 
++        tpm@0 {
++             name = "tpm";
++             status = "okay";
++             compatible = "microsoft,ftpm";
++             uuid = /bits/ 8 <0xbc 0x50 0xd9 0x71 0xd4 0xc9 0x42 0xc4 0x82 0xcb 0x34 0x3f 0xb7 0xf3 0x78 0x96>;
++        };
++
+ 	a72_timer0: timer-cl0-cpu0 {
+ 		compatible = "arm,armv8-timer";
+ 		interrupts = <GIC_PPI 13 IRQ_TYPE_LEVEL_LOW>, /* cntpsirq */

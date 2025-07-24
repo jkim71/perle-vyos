@@ -1,0 +1,19 @@
+--- a/arch/arm64/boot/dts/ti/k3-am642-evm.dts	2025-07-15 15:17:15.934193675 -0400
++++ b/arch/arm64/boot/dts/ti/k3-am642-evm.dts	2025-07-15 15:05:54.048654390 -0400
+@@ -231,2 +231,16 @@
+ 	};
++
++        firmware {
++                optee {
++                        compatible = "linaro,optee-tz";
++                        method = "smc";
++                };
++        };
++
++        tpm@0 {
++             name = "tpm";
++             status = "okay";
++             compatible = "microsoft,ftpm";
++             uuid = /bits/ 8 <0xbc 0x50 0xd9 0x71 0xd4 0xc9 0x42 0xc4 0x82 0xcb 0x34 0x3f 0xb7 0xf3 0x78 0x96>;
++        };
+ };

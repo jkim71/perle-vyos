@@ -1,5 +1,5 @@
 diff --git a/arch/arm64/boot/dts/ti/k3-am642-evm.dts b/arch/arm64/boot/dts/ti/k3-am642-evm.dts
-index 6cd9c7a74c39..c6cdced95982 100644
+index 6cd9c7a74c39..a247a1528fa6 100644
 --- a/arch/arm64/boot/dts/ti/k3-am642-evm.dts
 +++ b/arch/arm64/boot/dts/ti/k3-am642-evm.dts
 @@ -32,6 +32,7 @@ aliases {
@@ -10,7 +10,7 @@ index 6cd9c7a74c39..c6cdced95982 100644
  	};
  
  	memory@80000000 {
-@@ -508,6 +509,11 @@ display@3c {
+@@ -508,6 +509,12 @@ display@3c {
  		solomon,prechargep1 = <2>;
  		solomon,prechargep2 = <13>;
  	};
@@ -18,6 +18,7 @@ index 6cd9c7a74c39..c6cdced95982 100644
 +	rtc_rv3028: rtc@52 {
 +		compatible = "microcrystal,rv3028";
 +		reg = <0x52>;
++		trickle-resistor-ohms = <3000>;
 +	};
  };
  
